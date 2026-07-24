@@ -11,11 +11,15 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import lombok.Getter;
+import lombok.Setter;
 
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 @SQLDelete(sql = "UPDATE #{#entityName} SET deleted_at = now(), updated_at = now() WHERE id=?")
 @Where(clause = "deleted_at IS NULL")
+@Getter
+@Setter
 public class BaseEntity {
 
     @CreatedDate
@@ -28,6 +32,10 @@ public class BaseEntity {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
 
     // Dejaremos estos comentados por ahora hasta que configuremos Spring Security completamente.
     // @CreatedBy
