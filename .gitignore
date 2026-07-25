@@ -31,3 +31,65 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### IDE ###
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+/.settings/
+/.project
+/.classpath
+.springBeans
+.sts4-cache
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.settings/
+
+### Build directories ###
+# Maven
+/target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Gradle
+.gradle/
+/build/
+
+### Environment/Secrets ###
+.env
+.env.local
+.env.production
+
+### Local Configuration Files ###
+application-local.properties
+application-*.properties
+!**/application.properties
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+*.log
+logs/
+*/logs/
+
+### Temp files ###
+*.tmp
+*.temp
+.cache/

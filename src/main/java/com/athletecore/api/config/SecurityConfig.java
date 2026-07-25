@@ -21,8 +21,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                    // La regla específica y correcta que queríamos
-                    .requestMatchers("/api/v1/users/**").permitAll() 
+                    // Endpoints públicos: registro de nuevos usuarios
+                    .requestMatchers("/api/v1/users").permitAll()
                     .anyRequest().authenticated());
             
         return http.build();
@@ -30,6 +30,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // BCrypt con strength 12 rounds (número recomendado por OWASP para seguridad)
+        return new BCryptPasswordEncoder(12);
     }
 }

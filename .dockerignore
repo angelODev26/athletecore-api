@@ -1,0 +1,45 @@
+# Docker
+.docker/
+.dockerignore
+
+# Archivos de Docker
+Dockerfile*
+docker-compose*
+Dockerfile.*
+
+# .env con credenciales reales
+.env
+
+# Build outputs
+target/
+build/
+
+# Maven
+.mvn/
+**!/.mvn/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.settings/
+.project
+.classpath
+.factorypath
+.springBeans
+.sts4-cache
+.apt_generated
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temp
+*.tmp
+.cache/

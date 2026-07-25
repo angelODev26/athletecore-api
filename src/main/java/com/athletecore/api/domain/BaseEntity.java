@@ -3,7 +3,7 @@ package com.athletecore.api.domain;
 import java.time.Instant;
 
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -17,7 +17,7 @@ import lombok.Setter;
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 @SQLDelete(sql = "UPDATE #{#entityName} SET deleted_at = now(), updated_at = now() WHERE id=?")
-@Where(clause = "deleted_at IS NULL")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 public class BaseEntity {

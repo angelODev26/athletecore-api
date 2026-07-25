@@ -10,5 +10,5 @@ import com.athletecore.api.domain.Role;
 @Repository
 public interface RoleRepository extends JpaRepository<Role, Long> {
     
-    Optional<Role> findByName(String id);
+    Optional<Role> findByName(String name);
 }
