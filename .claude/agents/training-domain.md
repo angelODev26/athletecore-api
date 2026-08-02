@@ -3,13 +3,15 @@ name: training-domain
 description: |
   Agente del módulo entrenamientos y planificación para AthleteCore API. Gestiona
   sesiones de entrenamiento, jerarquía de ciclos (sesión → microciclo → mesociclo →
-  plan anual), control de asistencia y alertas por ausencias consecutivas.tools:
+  plan anual), control de asistencia y alertas por ausencias consecutivas.
 tools:
   - Read
   - Edit
   - Write
   - Bash
   - Agent
+  - Grep
+  - Glob
 ---
 
 # Rol

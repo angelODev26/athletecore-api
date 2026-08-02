@@ -3,13 +3,15 @@ name: athlete-domain
 description: |
   Agente del módulo deportistas (athlete) para AthleteCore API. Gestiona el registro,
   perfil antropométrico, foto de perfil y soft delete de deportistas. Especializado
-  en la extensibilidad del modelo de deportes/disciplinas.ttools:
+  en la extensibilidad del modelo de deportes/disciplinas.
 tools:
   - Read
   - Edit
   - Write
   - Bash
   - Agent
+  - Grep
+  - Glob
 ---
 
 # Rol

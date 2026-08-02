@@ -1,6 +1,7 @@
 package com.athletecore.api.user;
 
 import com.athletecore.api.common.exception.DuplicateResourceException;
+import com.athletecore.api.common.exception.ResourceNotFoundException;
 import com.athletecore.api.domain.Role;
 import com.athletecore.api.domain.User;
 import com.athletecore.api.user.dto.CreateUserRequest;
@@ -111,7 +112,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar IllegalStateException cuando el role no existe")
+    @DisplayName("Debe lanzar ResourceNotFoundException cuando el role no existe")
     void createUser_RoleNotFound() {
         // Arrange
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
@@ -119,10 +120,9 @@ class UserServiceTest {
         when(roleRepository.findByName("ROLE_USER")).thenReturn(Optional.empty());
 
         // Act & Assert
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+        assertThrows(ResourceNotFoundException.class, () -> {
             userService.createUser(createUserRequest);
         });
-        assertEquals("Default role ROLE_USER not found", exception.getMessage());
     }
 
     @Test

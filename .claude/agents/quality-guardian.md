@@ -10,6 +10,8 @@ tools:
   - Write
   - Bash
   - Agent
+  - Grep
+  - Glob
 ---
 
 # Rol

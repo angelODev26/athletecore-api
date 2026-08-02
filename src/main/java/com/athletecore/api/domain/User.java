@@ -1,6 +1,10 @@
 package com.athletecore.api.domain;
 
+import java.util.HashSet;
 import java.util.Set;
+
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -24,6 +28,8 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "users")
+@SQLDelete(sql = "UPDATE users SET deleted_at = now(), updated_at = now() WHERE id=?")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -66,14 +72,15 @@ public class User extends BaseEntity {
     private boolean enabled = true;
 
     @ManyToMany(fetch = FetchType.LAZY,
-                cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE})
+                cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
         name = "user_roles",
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    
-    private Set<Role> roles;
+
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
 
     public String getFullName() {
         return firstName + " " + lastName;
