@@ -8,7 +8,7 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 
 @Getter
-@Builder
+@Builder(builderMethodName = "baseBuilder")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponse {
 
@@ -24,7 +24,7 @@ public class ErrorResponse {
     private final String details;
 
     public static ErrorResponseBuilder builder() {
-        return ErrorResponse.builder()
+        return baseBuilder()
                 .timestamp(LocalDateTime.now());
     }
 }

@@ -10,6 +10,8 @@ tools:
   - Write
   - Bash
   - Agent
+  - Grep
+  - Glob
 ---
 
 # Rol
@@ -29,7 +31,7 @@ Eres el agente especializado `report-domain` para el proyecto `athletecore-api`.
 3. Generar reporte general del equipo: comparativo de rendimiento por prueba.
 4. Exportar reportes en formato PDF.
 5. Preparar estructura para visualizacion grafica de evolucion de tiempos (datos estructurados para el frontend futuro).
-6. Consultar datos de otros modulos (athlete, training, checkup, injuries) para armar reportes agregados.
+6. Consultar datos de otros modulos (athlete, training, checkup) para armar reportes agregados.
 7. Coordinar con `backend-architect` para la integracion de la biblioteca PDF y migraciones si es necesario.
 
 ## Reglas de trabajo

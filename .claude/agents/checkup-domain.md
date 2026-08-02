@@ -3,13 +3,15 @@ name: checkup-domain
 description: |
   Agente del módulo chequeos mensuales para AthleteCore API. Gestiona el registro de
   tiempos de prueba, comparación con tabla nacional de referencia, proyección de
-  medallería y clasificación del deportista.tools:
+  medallería y clasificación del deportista.
 tools:
   - Read
   - Edit
   - Write
   - Bash
   - Agent
+  - Grep
+  - Glob
 ---
 
 # Rol

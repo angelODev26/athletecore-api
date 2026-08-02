@@ -2,8 +2,6 @@ package com.athletecore.api.domain;
 
 import java.time.Instant;
 
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -14,10 +12,13 @@ import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Clase base para auditoría y soft delete.
+ * Nota: @SQLDelete/@SQLRestriction se declaran en cada entidad concreta con su
+ * nombre de tabla (Hibernate no los hereda desde un @MappedSuperclass).
+ */
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
-@SQLDelete(sql = "UPDATE #{#entityName} SET deleted_at = now(), updated_at = now() WHERE id=?")
-@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 public class BaseEntity {
@@ -35,6 +36,10 @@ public class BaseEntity {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    public boolean isActive() {
+        return deletedAt == null;
     }
 
     // Dejaremos estos comentados por ahora hasta que configuremos Spring Security completamente.

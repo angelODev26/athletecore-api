@@ -1,5 +1,8 @@
 package com.athletecore.api.domain;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -16,6 +19,8 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "roles")
+@SQLDelete(sql = "UPDATE roles SET deleted_at = now(), updated_at = now() WHERE id=?")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor

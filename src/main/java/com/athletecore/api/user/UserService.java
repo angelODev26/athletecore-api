@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.athletecore.api.common.exception.DuplicateResourceException;
 import com.athletecore.api.common.exception.ResourceNotFoundException;
+import com.athletecore.api.common.exception.ValidationException;
 import com.athletecore.api.domain.Role;
 import com.athletecore.api.domain.User;
 import com.athletecore.api.user.dto.CreateUserRequest;
@@ -30,7 +31,7 @@ public class UserService {
     public User createUser(CreateUserRequest createUserRequest) {
         // Validar que las contraseñas coincidan
         if (!createUserRequest.isPasswordConfirmed()) {
-            throw new IllegalArgumentException("Las contraseñas no coinciden");
+            throw new ValidationException("Las contraseñas no coinciden");
         }
 
         Optional<User> existingUser = userRepository.findByUsername(createUserRequest.getUsername());
@@ -54,7 +55,7 @@ public class UserService {
         newUser.setEnabled(true);
 
         Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new IllegalStateException("Default role ROLE_USER not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "name", "ROLE_USER"));
 
         newUser.setRoles(Collections.singleton(userRole));
 

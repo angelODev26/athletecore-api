@@ -92,19 +92,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
     }
 
-    // Manejo de AccessDeniedException de Spring Security (versión por defecto)
-    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleSpringAccessDeniedException(
-            org.springframework.security.access.AccessDeniedException ex) {
-        logger.warn("Acceso denegado por Spring Security");
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .status(HttpStatus.FORBIDDEN.value())
-                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
-                .message("No tiene permisos para acceder a este recurso")
-                .build();
-        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
-    }
-
     // Manejo de excepciones personalizadas
     @ExceptionHandler(InternalServerErrorException.class)
     public ResponseEntity<ErrorResponse> handleInternalServerErrorException(InternalServerErrorException ex) {
