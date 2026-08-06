@@ -1,10 +1,10 @@
 package com.athletecore.api.user;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,15 +29,23 @@ public class UserController {
         this.userService = userService;
     }
 
+    /**
+     * Lista todos los usuarios activos. Restringido a administradores porque
+     * expone datos personales (email, nombre completo).
+     * GET /api/v1/users
+     */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> getAllUsers() {
-        return userService.getAllUsers().stream()
-                .map(UserResponse::fromUser)
-                .collect(Collectors.toList());
+        return userService.getAllUsers();
     }
 
+    /**
+     * Registra un nuevo usuario. Endpoint público.
+     * POST /api/v1/users
+     */
     @PostMapping
-    public ResponseEntity<?> createUser(@Valid @RequestBody CreateUserRequest createUserRequest) {
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest createUserRequest) {
         User createdUser = userService.createUser(createUserRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.fromUser(createdUser));
     }

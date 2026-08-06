@@ -44,26 +44,26 @@
 **Agente:** [@training-domain](.claude/agents/training-domain.md)
 
 #### Features Prioritarias:
-- [ ] Migración V3__training_schema.sql
-  - [ ] Tabla `training_plans` (plan anual)
-  - [ ] Tabla `training_cycles` (mesociclos/microciclos)
-  - [ ] Tabla `training_sessions` (sesiones individuales)
-  - [ ] Tabla `attendance` (control asistencia)
-- [ ] Entidades Java
-  - [ ] `TrainingPlan` extends `BaseEntity`
-  - [ ] `TrainingCycle` extends `BaseEntity`
-  - [ ] `TrainingSession` extends `BaseEntity`
-  - [ ] `Attendance` extends `BaseEntity`
-- [ ] Servicios
-  - [ ] `TrainingPlanService` (planificación)
-  - [ ] `TrainingSessionService` (sesiones)
-  - [ ] `AttendanceService` (control asistencia)
-  - [ ] `AlertService` (alertas ausencias)
-- [ ] Controllers REST
-  - [ ] `TRAINING_API` (CRUD entrenamientos)
-  - [ ] Alertas por ausencias consecutivas
-  - [ ] Respuestas con DTOs
-- [ ] Tests unitarios (cobertura >80%)
+- [x] Migración V3__training_schema.sql
+  - [x] Tabla `training_plans` (plan anual)
+  - [x] Tabla `training_cycles` (mesociclos/microciclos)
+  - [x] Tabla `training_sessions` (sesiones individuales)
+  - [x] Tabla `attendance` (control asistencia)
+- [x] Entidades Java
+  - [x] `TrainingPlan` extends `BaseEntity`
+  - [x] `TrainingCycle` extends `BaseEntity`
+  - [x] `TrainingSession` extends `BaseEntity`
+  - [x] `Attendance` extends `BaseEntity`
+- [x] Servicios
+  - [x] `TrainingPlanService` (planificación)
+  - [x] `TrainingSessionService` (sesiones)
+  - [x] `AttendanceService` (control asistencia)
+  - [x] `AlertService` (alertas ausencias)
+- [x] Controllers REST
+  - [x] `TRAINING_API` (CRUD entrenamientos)
+  - [x] Alertas por ausencias consecutivas
+  - [x] Respuestas con DTOs
+- [x] Tests unitarios (54 tests: planes, ciclos, sesiones, asistencia, alertas — verificado con `./mvnw test -Dtest='*Training*Test,*Attendance*Test,*Alert*Test'`)
 
 ---
 
@@ -250,7 +250,23 @@
 |--------|--------|------------|-----------|
 | User/Security | ✅ Completo | 100% | 0% |
 | Athlete | ✅ Completo | 100% | 0% (reportes → módulo Reportes) |
-| Training | ⏳ Por empezar | 0% | 100% |
+| Training | ✅ Completo | 100% | 0% (alertas → acknowledge sin persistencia, ver OpenSpec) |
+
+> **Deuda técnica conocida — Módulo Training: alertas no persistentes**
+>
+> `AlertService.acknowledgeAlert` (líneas 94-112) está marcado con `@Transactional(readOnly = true)`
+> porque las alertas son derivadas del historial de `Attendance` (no se persisten como entidad).
+> El endpoint `POST /api/v1/alerts/attendance/{athleteId}/acknowledge` solo valida y devuelve la
+> alerta actual, pero **no muta estado**: la próxima consulta `GET /api/v1/alerts/attendance`
+> volverá a listar la misma alerta. La racha solo se limpia cuando se registra una asistencia
+> PRESENTE o JUSTIFICADA que la rompa.
+>
+> **Decisión:** mantener como deuda conocida hasta observar el comportamiento en producción y
+> decidir el modelo de persistencia adecuado. Si la UX operacional lo requiere, la corrección
+> contemplada es una nueva entidad `AlertAcknowledgment extends BaseEntity` (con FK `athlete_id`,
+> `acknowledged_by`, `acknowledged_at`, `streak_snapshot`, `last_absence_date`) + migración V4
+> + filtrado en `AlertService.getActiveAlerts` que compare el último ACK con la fecha del último
+> AUSENTE de la racha actual. Ver `openspec/changes/implement-training-domain/tasks.md` tarea 6.2.
 | Checkup | ⏳ Por empezar | 0% | 100% |
 | Reports | ⏳ Por empezar | 0% | 100% |
 | Infraestructura | 🚧 Parcial | 30% | 70% |
@@ -258,5 +274,5 @@
 
 ---
 
-**Última actualización:** 2026-08-02  
+**Última actualización:** 2026-08-03  
 **Próxima revisión de roadmap:** Cada 2 sprints o cuando se completa un módulo

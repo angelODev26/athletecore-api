@@ -14,6 +14,7 @@ import com.athletecore.api.common.exception.ValidationException;
 import com.athletecore.api.domain.Role;
 import com.athletecore.api.domain.User;
 import com.athletecore.api.user.dto.CreateUserRequest;
+import com.athletecore.api.user.dto.UserResponse;
 
 @Service
 public class UserService {
@@ -63,7 +64,9 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(UserResponse::fromUser)
+                .toList();
     }
 }
