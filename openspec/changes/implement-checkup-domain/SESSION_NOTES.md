@@ -9,22 +9,27 @@
 - Migración: `src/main/resources/db/migration/V4__checkup_schema.sql` (3 tablas, FKs ON DELETE RESTRICT, índices parciales, COMMENT ON, ROLLBACK documentado)
 - `./mvnw compile` → BUILD SUCCESS
 
-## Qué está en working tree SIN commitear (Fase B)
+## Qué está commiteado (c500e40) — Fase B
 - 22 archivos nuevos en `src/main/java/com/athletecore/api/checkup/` (+ subpackage `checkup/dto/`):
-  - 3 entidades: `Checkup.java`, `CheckupTime.java`, `NationalReferenceTime.java` (extienden `BaseEntity`, `@SQLDelete`/`@SQLRestriction` propios)
+  - 3 entidades: `Checkup.java`, `CheckupTime.java`, `NationalReferenceTime.java` (extienden `BaseEntity`, `@SQLDelete`/`@SQLRestriction` propios, sin `@Where`)
   - 4 enums: `CheckupCategory` ({INFANTIL, JUVENIL, MAYOR}), `SwimmingStyle` ({LIBRE, ESPALDA, BRAZA, MARIPOSA, COMBINADO}), `Classification` ({POR_ENCIMA_DEL_PODIO, CERCANO_A_MEDALLERIA, FUERA_DE_RANGO})
   - 1 record de dominio: `MedalProjection` (NO @Entity, decision D5)
   - 3 repositorios: `CheckupRepository`, `CheckupTimeRepository`, `NationalReferenceTimeRepository` (con consultas `findActive...` y `existsActive...` con `@Query` JPQL)
   - 1 utilidad: `TimeFormatter` (BigDecimal ↔ `mm:ss.ms`/`hh:mm:ss.ms`, `toSignedFormatted` para deltas)
   - 11 DTOs records en `checkup/dto/` (con factories `fromEntity(...)`; responses incluyen `timeSeconds` + `timeFormatted`)
-- `./mvnw compile` → BUILD SUCCESS
+- `./mvnw compile` → BUILD SUCCESS (re-verificado al commitear)
 - `Athlete.java`, `application.properties`, `SecurityConfig` NO modificados (verificado con `git status`)
 
 ## Estado de tareas (ver `tasks.md` del change para checkboxes `[x]`)
-- Fase A (tasks 1.1–1.6): ✅ completa y commiteada
-- Fase B (tasks 2.1–2.6, 3.1–3.4): ✅ completa en working tree, SIN commitear
+- Fase A (tasks 1.1–1.6): ✅ completa y commiteada en `246344f`
+- Fase B (tasks 2.1–2.6, 3.1–3.4): ✅ completa y commiteada en `c500e40`
 - Fase C (tasks 4.1–4.6 servicios, 5.1–5.5 controllers + SecurityConfig): ⏳ pendiente
 - Fase D (tasks 6.1–6.9 tests + auditoría quality-guardian): ⏳ pendiente
+
+## Estado del repositorio (revisión 2026-08-07 posterior al stash)
+- Branch: `feature/implement-checkup-domain` (default).
+- Stash list: **vacío** (se descartó `stash@{0}` porque era redundante con el working tree — contenía los mismos typos corregidos de `tasks.md` 4.1/4.3).
+- Working tree (sin commitear): únicamente `openspec/changes/implement-checkup-domain/tasks.md` con dos correcciones cosméticas en tasks 4.1 y 4.3 (`ConflictException` → `DuplicateResourceException`, aclaración "sin Clock").
 
 ## Decisiones del usuario (no revear mañana)
 1. **Workflow**: crear change OpenSpec primero (hecho) + implementar por fases con check-in entre cada una.
@@ -33,7 +38,7 @@
 4. **`NationalReferenceTimeService`**: servicio separado (5º servicio, SRP).
 5. **Branch**: `feature/implement-checkup-domain` desde `master` (ya creada).
 6. **FK ON DELETE**: RESTRICT en V4 (Design D8). V3 usa CASCADE → deuda conocida, registrada en D8. Opening de change separado para uniformar V3 queda fuera de scope.
-7. **Commits**: checkpoints por fase. Fase B NO commiteada todavía — el usuario quiere revisar Fase B manualmente primero (decisión al cierre de sesión 2026-08-07).
+7. **Commits**: checkpoints por fase. Fase A commiteada en `246344f`, Fase B commiteada en `c500e40` (tras revisión manual del usuario el 2026-08-07).
 
 ## Notas críticas para Fase C (pasar al subagente checkup-domain)
 - **409**: usar `DuplicateResourceException` ya existente en `common/exception/` (no crear `ConflictException`). El subagente B lo confirmó en su reporte.
@@ -45,15 +50,15 @@
 - **`TimeComparisonService`**: si el triple (style, distance, category) no está completo (faltan 1°/2°/3°), lanza `DuplicateResourceException` → 409 (es lo que existe; re-verificar si conviene más un 422, pero el subagente B confirmó que DuplicateResourceException es 409 según `common/exception`). Confirmarlo en Fase C si hay dudas.
 
 ## Siguientes pasos al retomar
-1. `cd /home/angeldev/athletecore-api && git status` — confirmar que working tree tiene `?? src/main/java/com/athletecore/api/checkup/` (untracked, 22 archivos) y que `feature/implement-checkup-domain` es la branch actual.
-2. **Revisión manual Fase B** (decisión del usuario): revisar `Checkup.java`, `TimeFormatter.java`, DTOs y repositorios antes de commitear. Ajustar con `edit` si el usuario pide cambios.
-3. Commit checkpoint Fase B con `feat: implementar entidades y DTOs del módulo checkup (Fase B)`.
-4. Orquestación Fase C: invocar subagente `checkup-domain` con tasks 4.1–4.6 y 5.1–5.5, pasándole las notas críticas de arriba.
-5. Tras Fase C: check-in, commit checkpoint.
-6. Fase D: tests (`quality-guardian` final).
+1. `cd /home/angeldev/athletecore-api && git status` — el working tree debe estar limpio salvo, eventaualmente, nuevas ediciones en curso de Fase C.
+2. Confirmar branch: `feature/implement-checkup-domain`. Commits esperados: `246344f` (Fase A) y `c500e40` (Fase B).
+3. Orquestación Fase C: invocar subagente `checkup-domain` con tasks 4.1–4.6 (servicios) y 5.1–5.5 (controllers + SecurityConfig), pasándole las notas críticas de la sección siguiente.
+4. Tras Fase C: check-in con el usuario, commit checkpoint Fase C.
+5. Fase D: tests (checkup-domain) + auditoría final (`quality-guardian`).
+6. Cierre del módulo: actualizar `TASKS.md` raíz (marcar Checkup completo, deuda D5 sobre `medal_projections`) — task 6.9.
 
-## Inconsistencias connu00ec 
-- **design.md D8 ↔ V3 real**: ya corregido en el commit (D8 ahora declara RESTRICT como nueva convención y marca V3 CASCADE como deuda conocida).
+## Inconsistencias conocidas
+- **design.md D8 ↔ V3 real**: ya corregido en el commit `246344f` (D8 ahora declara RESTRICT como nueva convención y marca V3 CASCADE como deuda conocida).
 - **`AthleteReportingService` (TASKS.md:34)**: confirmado que NO es parte de este change — pertenece al Módulo 4 Reportes. El subagente checkup-domain no debe tocarlo.
 
 ## Pendientes globales
