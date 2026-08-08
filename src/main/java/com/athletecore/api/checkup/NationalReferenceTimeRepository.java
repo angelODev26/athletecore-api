@@ -1,7 +1,6 @@
 package com.athletecore.api.checkup;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,16 +24,6 @@ public interface NationalReferenceTimeRepository extends JpaRepository<NationalR
             + "ORDER BY nrt.position ASC")
     List<NationalReferenceTime> findActiveTripleByStyleDistanceCategory(@Param("style") String style,
             @Param("distance") Integer distance, @Param("category") String category);
-
-    /**
-     * Busca la referencia activa para (style, distance, category, position).
-     */
-    @Query("SELECT nrt FROM NationalReferenceTime nrt WHERE nrt.style = :style "
-            + "AND nrt.distance = :distance AND nrt.category = :category AND nrt.position = :position "
-            + "AND nrt.deletedAt IS NULL")
-    Optional<NationalReferenceTime> findActiveByStyleDistanceCategoryAndPosition(
-            @Param("style") String style, @Param("distance") Integer distance,
-            @Param("category") String category, @Param("position") Short position);
 
     /**
      * Verifica si existe una referencia activa para (style, distance, category, position).

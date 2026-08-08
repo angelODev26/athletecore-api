@@ -1,7 +1,6 @@
 package com.athletecore.api.checkup;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -22,14 +21,6 @@ public interface CheckupTimeRepository extends JpaRepository<CheckupTime, Long> 
     @Query("SELECT ct FROM CheckupTime ct WHERE ct.checkup.id = :checkupId AND ct.deletedAt IS NULL "
             + "ORDER BY ct.style ASC, ct.distance ASC")
     List<CheckupTime> findActiveByCheckupId(@Param("checkupId") Long checkupId);
-
-    /**
-     * Busca el tiempo activo de un chequeo para un (style, distance) dados.
-     */
-    @Query("SELECT ct FROM CheckupTime ct WHERE ct.checkup.id = :checkupId AND ct.style = :style "
-            + "AND ct.distance = :distance AND ct.deletedAt IS NULL")
-    Optional<CheckupTime> findActiveByCheckupIdAndStyleAndDistance(@Param("checkupId") Long checkupId,
-            @Param("style") String style, @Param("distance") Integer distance);
 
     /**
      * Verifica si existe un tiempo activo para el mismo (checkup, style, distance).
