@@ -71,26 +71,27 @@
 **Agente:** [@checkup-domain](.claude/agents/checkup-domain.md)
 
 #### Features Prioritarias:
-- [ ] Migración V4__checkup_schema.sql
-  - [ ] Tabla `checkups` (chequeos mensuales)
-  - [ ] Tabla `checkup_times` (tiempos de prueba)
-  - [ ] Tabla `national_reference_times` (referencia nacional)
-  - [ ] Tabla `medal_projections` (proyección medallería)
-- [ ] Entidades Java
-  - [ ] `Checkup` extends `BaseEntity`
-  - [ ] `CheckupTime` extends `BaseEntity`
-  - [ ] `NationalReferenceTime` extends `BaseEntity`
-  - [ ] `MedalProjection` extends `BaseEntity`
-- [ ] Servicios
-  - [ ] `CheckupService` (registro chequeos)
-  - [ ] `TimeComparisonService` (comparación referencias)
-  - [ ] `MedalProjectionService` (proyección medallería)
-  - [ ] `ClassificationService` (clasificación por podio)
-- [ ] Controllers REST
-  - [ ] `CHECKUP_API` (CRUD chequeos)
-  - [ ] Tablas de referencia nacional (solo admin)
-  - [ ] Respuestas con DTOs y formato mm:ss.ms
-- [ ] Tests unitarios (cobertura >80%)
+- [x] Migración V4__checkup_schema.sql
+  - [x] Tabla `checkups` (chequeos mensuales)
+  - [x] Tabla `checkup_times` (tiempos de prueba)
+  - [x] Tabla `national_reference_times` (referencia nacional)
+  - [~] Sin tabla — `MedalProjection` es record JVM no-entity (Design D5)
+- [x] Entidades Java
+  - [x] `Checkup` extends `BaseEntity`
+  - [x] `CheckupTime` extends `BaseEntity`
+  - [x] `NationalReferenceTime` extends `BaseEntity`
+  - [~] `MedalProjection` es record (Design D5): no extiende `BaseEntity`, no se persiste
+- [x] Servicios
+  - [x] `CheckupService` (registro chequeos)
+  - [x] `NationalReferenceTimeService` (CRUD admin tabla nacional — SRP)
+  - [x] `TimeComparisonService` (comparación referencias)
+  - [x] `MedalProjectionService` (proyección medallería)
+  - [x] `ClassificationService` (clasificación por podio)
+- [x] Controllers REST
+  - [x] `CHECKUP_API` (CRUD chequeos: `CheckupController` + `NationalReferenceTimeController`)
+  - [x] Tablas de referencia nacional (solo admin)
+  - [x] Respuestas con DTOs y formato mm:ss.ms
+- [x] Tests unitarios (72 tests: 59 unitarios + 13 e2e, verificados en runtime contra PostgreSQL)
 
 ---
 
@@ -190,7 +191,7 @@
 - Sesiones y ciclos
 - Control de asistencia
 
-### v0.4.0 - Módulo Chequeos
+### v0.4.0 - Módulo Chequeos ✅
 - Registro de tiempos
 - Comparación referencias
 - Proyección medallería
@@ -267,12 +268,23 @@
 > `acknowledged_by`, `acknowledged_at`, `streak_snapshot`, `last_absence_date`) + migración V4
 > + filtrado en `AlertService.getActiveAlerts` que compare el último ACK con la fecha del último
 > AUSENTE de la racha actual. Ver `openspec/changes/implement-training-domain/tasks.md` tarea 6.2.
-| Checkup | ⏳ Por empezar | 0% | 100% |
+>
+> **Deuda técnica conocida — Módulo Checkup: `medal_projections` sin tabla persistente**
+>
+> Por la decisión D5 del design (`openspec/changes/implement-checkup-domain/design.md`),
+> `MedalProjection` se modela como record JVM (no `@Entity`) construido en tiempo de consulta
+> por `MedalProjectionService` (`@Transactional(readOnly = true)`) a partir de los `CheckupTime`
+> activos y el triple activo de `NationalReferenceTime` para cada (style, distance, category).
+> **No hay tabla `medal_projections`** en V4: la spec `medal-projection` exige
+> "Projection does not mutate state". Si el Módulo Reportes (v0.5.0) requiere materializar la
+> proyección (cache pre-calculada o exportación PDF), ese change introducirá la tabla y la
+> migración asociada.
+| Checkup | ✅ Completo | 100% | 0% (deuda D5 `medal_projections` sin tabla) |
 | Reports | ⏳ Por empezar | 0% | 100% |
 | Infraestructura | 🚧 Parcial | 30% | 70% |
 | Tests | 🚧 Parcial | 45% | 55% |
 
 ---
 
-**Última actualización:** 2026-08-03  
+**Última actualización:** 2026-08-13  
 **Próxima revisión de roadmap:** Cada 2 sprints o cuando se completa un módulo
