@@ -5,14 +5,17 @@ import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Configuración general de aplicación para beans transversales.
- * Registra el bean Clock usado por la lógica de alertas (determinista y testeable)
- * y habilita las propiedades de configuración del módulo de entrenamientos.
+ * Registra el bean Clock usado por la lógica de alertas (determinista y testeable),
+ * habilita las propiedades de configuración del módulo de entrenamientos y activa
+ * la programación automática de tareas (módulo de reportes).
  */
 @Configuration
 @EnableConfigurationProperties(TrainingProperties.class)
+@EnableScheduling
 public class AppConfig {
 
     /**
