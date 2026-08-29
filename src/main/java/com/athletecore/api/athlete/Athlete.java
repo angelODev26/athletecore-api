@@ -23,7 +23,6 @@ import jakarta.validation.constraints.Size;
 
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
-import org.hibernate.annotations.Where;
 
 import com.athletecore.api.domain.BaseEntity;
 
@@ -87,6 +86,7 @@ public class Athlete extends BaseEntity {
         joinColumns = @JoinColumn(name = "athlete_id"),
         inverseJoinColumns = @JoinColumn(name = "sport_id")
     )
+    @Builder.Default
     private Set<Sport> sports = new HashSet<>();
 
     /**
