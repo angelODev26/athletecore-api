@@ -1,7 +1,6 @@
 ---
 description: Agente del módulo deportistas (athlete) para AthleteCore API. Gestiona el registro, perfil antropométrico, foto de perfil y soft delete de deportistas. Especializado en la extensibilidad del modelo de deportes/disciplinas.
 mode: subagent
-model: opencode/deepseek-v4-flash-free
 permission:
   read: allow
   edit: allow

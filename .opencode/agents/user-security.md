@@ -1,7 +1,6 @@
 ---
 description: Agente de autenticación, autorización y gestión de usuarios para AthleteCore API. Gestiona JWT, roles (RBAC), flujos de registro/login, activación/desactivación de cuentas. Especializado en el módulo `user/` y su interacción con Spring Security.
 mode: subagent
-model: opencode/deepseek-v4-flash-free
 permission:
   read: allow
   edit: allow

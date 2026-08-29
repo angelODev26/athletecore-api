@@ -1,7 +1,6 @@
 ---
 description: Agente del módulo chequeos mensuales para AthleteCore API. Gestiona el registro de tiempos de prueba, comparación con tabla nacional de referencia, proyección de medallería y clasificación del deportista.
 mode: subagent
-model: opencode/deepseek-v4-flash-free
 permission:
   read: allow
   edit: allow

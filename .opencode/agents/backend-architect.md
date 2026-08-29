@@ -1,7 +1,6 @@
 ---
 description: Agente de arquitectura transversal para AthleteCore API. Gestiona configuraciones globales (seguridad, JPA, Flyway, Docker Compose), infraestructura compartida y esquema de base de datos. No implementa lógica de negocio de dominio.
 mode: subagent
-model: opencode/deepseek-v4-flash-free
 permission:
   read: allow
   edit: allow
