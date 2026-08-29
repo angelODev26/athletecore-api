@@ -90,7 +90,7 @@ Stakeholders: backend-architect (migración V5 + dependencia PDF + `@EnableSched
 **Por qué:** `ReportScheduleService` (scheduling) y `ReportGenerationService` (auditoría de generación) dependen de "ahora"; el `Clock` hace ambos deterministas y testeables.
 
 ### D8: Seguridad — no `permitAll()`; escrituras con rol
-**Decisión:** Todos los endpoints `/api/v1/reports/**`, `/api/v1/athletes/{athleteId}/report`, `/api/v1/report-schedules/**` requieren autenticación. Escrituras de programación (`POST/PUT/DELETE /report-schedules`) y generación (`POST /reports`) requieren `@PreAuthorize("hasAnyRole('ADMIN', 'COACH')")`; las lecturas (descarga incluida) quedan autenticadas por `anyRequest().authenticated()`. No se añaden reglas `permitAll()`.
+**Decisión:** Todos los endpoints `/api/v1/reports/**`, `/api/v1/athletes/{athleteId}/report`, `/api/v1/report-schedules/**` requieren autenticación. Generación y soft delete de reportes (`POST/DELETE /reports`) requieren `@PreAuthorize("hasAnyRole('ADMIN', 'COACH')")`; la gestión de programaciones (`POST/PUT/DELETE /report-schedules`) está restringida a `@PreAuthorize("hasRole('ADMIN')")` (consistente con la spec `report-scheduling` "Schedule management is restricted to ADMIN" y con la tabla nacional del módulo checkup); las lecturas (descarga incluida) quedan autenticadas por `anyRequest().authenticated()`. No se añaden reglas `permitAll()`.
 
 **Por qué:** Consistencia con `checkup/` y `training/`; la descarga de PDF requiere autenticación (no es recurso público).
 
