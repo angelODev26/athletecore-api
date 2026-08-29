@@ -1,7 +1,6 @@
 ---
 description: Agente del modulo reportes para AthleteCore API. Gestiona la generacion de reportes individuales y generales, exportacion a PDF y visualizacion grafica de evolucion de tiempos. Integra datos de deportistas, entrenamientos y chequeos.
 mode: subagent
-model: opencode/deepseek-v4-flash-free
 permission:
   read: allow
   edit: allow

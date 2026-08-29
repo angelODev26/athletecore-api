@@ -1,7 +1,6 @@
 ---
 description: Agente de calidad y revisión para AthleteCore API. Revisa calidad de código, cobertura de tests, deuda técnica, aplicación de principios SOLID y consistencia con las convenciones del proyecto. No implementa features.
 mode: subagent
-model: opencode/deepseek-v4-flash-free
 permission:
   read: allow
   edit: allow

@@ -31,7 +31,7 @@
   - [x] `AthleteRegistrationService` (registro)
   - [x] `AthleteProfileService` (perfil antropométrico)
   - [x] `AthleteSportService` (asignación de deportes)
-  - [ ] `AthleteReportingService` (reportes — pendiente del módulo Reportes)
+  - [x] `AthleteReportingService` (reportes — implementado en Módulo 4 Reportes)
 - [x] Controllers REST
   - [x] `ATHLETES_API` (CRUD deportistas)
   - [x] Validaciones con Jakarta Validation
@@ -99,24 +99,26 @@
 **Agente:** [@report-domain](.claude/agents/report-domain.md)
 
 #### Features Prioritarias:
-- [ ] Migración V5__reports_schema.sql
-  - [ ] Tabla `reports` (generación de reportes)
-  - [ ] Tabla `report_schedules` (programación)
-  - [ ] Tabla `report_exports` (exportaciones)
-- [ ] Entidades Java
-  - [ ] `Report` extends `BaseEntity`
-  - [ ] `ReportSchedule` extends `BaseEntity`
-  - [ ] `ReportExport` extends `BaseEntity`
-- [ ] Servicios
-  - [ ] `ReportGenerationService` (generación PDF)
-  - [ ] `ReportScheduleService` (programación)
-  - [ ] `ExportService` (exportaciones)
-- [ ] Controllers REST
-  - [ ] `REPORTS_API` (CRUD reportes)
-  - [ ] Generación PDF de reportes
-  - [ ] Programación automática de reportes
-  - [ ] Respuestas con DTOs
-- [ ] Tests unitarios (cobertura >80%)
+- [x] Migración V5__reports_schema.sql
+  - [x] Tabla `reports` (generación de reportes)
+  - [x] Tabla `report_schedules` (programación)
+  - [x] Tabla `report_exports` (exportaciones)
+- [x] Entidades Java
+  - [x] `Report` extends `BaseEntity`
+  - [x] `ReportSchedule` extends `BaseEntity`
+  - [x] `ReportExport` extends `BaseEntity`
+- [x] Servicios
+  - [x] `ReportGenerationService` (orquestación PENDING→GENERATED/FAILED)
+  - [x] `AthleteReportingService` (reporte individual)
+  - [x] `TeamReportingService` (reporte general)
+  - [x] `ExportService` (exportación PDF)
+  - [x] `ReportScheduleService` (programación)
+- [x] Controllers REST
+  - [x] `REPORTS_API` (CRUD reportes: `ReportController` + `ReportScheduleController`)
+  - [x] Generación PDF de reportes (OpenPDF) y descarga
+  - [x] Programación automática de reportes (`@Scheduled` + cron)
+  - [x] Respuestas con DTOs
+- [x] Tests unitarios (21 tests: 5 clases de servicio, JUnit5 + Mockito)
 
 ---
 
@@ -196,7 +198,7 @@
 - Comparación referencias
 - Proyección medallería
 
-### v0.5.0 - Módulo Reportes
+### v0.5.0 - Módulo Reportes ✅
 - Generación PDF
 - Programación de reportes
 - Exportaciones
@@ -280,11 +282,11 @@
 > proyección (cache pre-calculada o exportación PDF), ese change introducirá la tabla y la
 > migración asociada.
 | Checkup | ✅ Completo | 100% | 0% (deuda D5 `medal_projections` sin tabla) |
-| Reports | ⏳ Por empezar | 0% | 100% |
+| Reports | ✅ Completo | 100% | 0% (deuda D5 `medal_projections` sin tabla — confirmada decisión D3 del change) |
 | Infraestructura | 🚧 Parcial | 30% | 70% |
 | Tests | 🚧 Parcial | 45% | 55% |
 
 ---
 
-**Última actualización:** 2026-08-13  
+**Última actualización:** 2026-08-29  
 **Próxima revisión de roadmap:** Cada 2 sprints o cuando se completa un módulo

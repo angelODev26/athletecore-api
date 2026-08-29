@@ -1,7 +1,6 @@
 ---
 description: Agente del módulo entrenamientos y planificación para AthleteCore API. Gestiona sesiones de entrenamiento, jerarquía de ciclos (sesión → microciclo → mesociclo → plan anual), control de asistencia y alertas por ausencias consecutivas.
 mode: subagent
-model: opencode/deepseek-v4-flash-free
 permission:
   read: allow
   edit: allow
