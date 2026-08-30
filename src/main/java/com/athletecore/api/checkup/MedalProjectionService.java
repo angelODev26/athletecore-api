@@ -2,8 +2,10 @@ package com.athletecore.api.checkup;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,6 +77,35 @@ public class MedalProjectionService {
             }
         }
         return projections;
+    }
+
+    /**
+     * Calcula las proyecciones de medallería de todos los deportistas con
+     * chequeos activos en una sola pasada, evitando N+1 respecto a la versión
+     * por atleta (consume el módulo reportes). Carga todos los chequeos y
+     * tiempos activos en dos consultas y reutiliza la cache de triples de
+     * referencia de forma global.
+     *
+     * @return Mapa de athleteId → lista de proyecciones (no persistidas)
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, List<MedalProjection>> getProjectionsForAllAthletes() {
+        List<Checkup> checkups = checkupRepository.findAllActive();
+        Map<Long, List<CheckupTime>> timesByCheckup = checkupTimeRepository.findAllActive().stream()
+                .collect(Collectors.groupingBy(time -> time.getCheckup().getId()));
+
+        Map<String, List<NationalReferenceTime>> referenceCache = new HashMap<>();
+        Map<Long, List<MedalProjection>> projectionsByAthlete = new LinkedHashMap<>();
+
+        for (Checkup checkup : checkups) {
+            Long athleteId = checkup.getAthlete().getId();
+            List<CheckupTime> times = timesByCheckup.getOrDefault(checkup.getId(), List.of());
+            for (CheckupTime time : times) {
+                MedalProjection projection = buildProjection(checkup, time, referenceCache);
+                projectionsByAthlete.computeIfAbsent(athleteId, k -> new ArrayList<>()).add(projection);
+            }
+        }
+        return projectionsByAthlete;
     }
 
     private MedalProjection buildProjection(Checkup checkup, CheckupTime time,

@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -48,23 +49,27 @@ public class TeamReportingService {
      */
     @Transactional(readOnly = true)
     public TeamReportResponse assembleTeamReport(String category) {
-        List<Athlete> athletes = athleteRepository.findAllByDeletedAtIsNull(Pageable.unpaged()).getContent();
+        Map<Long, Athlete> athletesById = athleteRepository.findAllByDeletedAtIsNull(Pageable.unpaged())
+                .getContent().stream()
+                .collect(Collectors.toMap(Athlete::getId, athlete -> athlete));
+
+        Map<Long, List<MedalProjection>> projectionsByAthlete =
+                medalProjectionService.getProjectionsForAllAthletes();
 
         // Clave de agrupación "style|distance|category" -> (athleteId -> proyecciones)
         Map<String, Map<Long, List<MedalProjection>>> grouped = new LinkedHashMap<>();
 
-        for (Athlete athlete : athletes) {
-            List<MedalProjection> projections = medalProjectionService.getProjectionsForAthlete(athlete.getId());
+        projectionsByAthlete.forEach((athleteId, projections) -> {
             for (MedalProjection projection : projections) {
                 if (category != null && !category.equals(projection.category())) {
                     continue;
                 }
                 String key = projection.style() + "|" + projection.distance() + "|" + projection.category();
                 grouped.computeIfAbsent(key, k -> new LinkedHashMap<>())
-                        .computeIfAbsent(athlete.getId(), k -> new ArrayList<>())
+                        .computeIfAbsent(athleteId, k -> new ArrayList<>())
                         .add(projection);
             }
-        }
+        });
 
         List<TeamEntry> entries = new ArrayList<>();
         grouped.forEach((key, byAthlete) -> {
@@ -78,10 +83,10 @@ public class TeamReportingService {
                 MedalProjection best = projections.stream()
                         .min(Comparator.comparing(MedalProjection::timeSeconds))
                         .orElseThrow();
-                Athlete athlete = athleteRepository.findById(athleteId).orElseThrow();
+                Athlete athlete = athletesById.get(athleteId);
                 athleteEntries.add(new AthleteEntry(
                         athleteId,
-                        athlete.getFullName(),
+                        athlete != null ? athlete.getFullName() : "Atleta " + athleteId,
                         best.timeSeconds(),
                         TimeFormatter.toFormatted(best.timeSeconds()),
                         best.classification(),

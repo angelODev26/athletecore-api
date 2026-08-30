@@ -23,6 +23,13 @@ public interface CheckupRepository extends JpaRepository<Checkup, Long> {
     List<Checkup> findActiveByAthleteId(@Param("athleteId") Long athleteId);
 
     /**
+     * Lista todos los chequeos activos, del más reciente al más antiguo.
+     * Usado por la agregación en lote del módulo reportes (evita N+1).
+     */
+    @Query("SELECT c FROM Checkup c WHERE c.deletedAt IS NULL ORDER BY c.year DESC, c.month DESC")
+    List<Checkup> findAllActive();
+
+    /**
      * Lista los chequeos activos de un deportista para un año y mes dados.
      * Puede haber varios por categoría (la unicidad incluye category).
      */

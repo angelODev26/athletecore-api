@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +28,7 @@ import com.athletecore.api.report.dto.TeamReportResponse;
 /**
  * Tests unitarios de TeamReportingService: agregación por (style, distance,
  * category) con mejor tiempo por atleta, filtrado por categoría y determinismo.
+ * Usa la proyección en lote (getProjectionsForAllAthletes) para evitar N+1.
  */
 @ExtendWith(MockitoExtension.class)
 class TeamReportingServiceTest {
@@ -56,16 +57,15 @@ class TeamReportingServiceTest {
         when(athleteRepository.findAllByDeletedAtIsNull(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(juan, maria)));
         // Juan tiene dos proyecciones en la misma prueba: se queda con la más rápida.
-        when(medalProjectionService.getProjectionsForAthlete(1L)).thenReturn(List.of(
-                new MedalProjection("LIBRE", 100, "MAYOR", Classification.POR_ENCIMA_DEL_PODIO,
-                        new BigDecimal("64.000"), new BigDecimal("-1.000")),
-                new MedalProjection("LIBRE", 100, "MAYOR", Classification.POR_ENCIMA_DEL_PODIO,
-                        new BigDecimal("66.000"), new BigDecimal("1.000"))));
-        when(medalProjectionService.getProjectionsForAthlete(2L)).thenReturn(List.of(
-                new MedalProjection("LIBRE", 100, "MAYOR", Classification.POR_ENCIMA_DEL_PODIO,
-                        new BigDecimal("63.000"), new BigDecimal("-2.000"))));
-        when(athleteRepository.findById(1L)).thenReturn(Optional.of(juan));
-        when(athleteRepository.findById(2L)).thenReturn(Optional.of(maria));
+        when(medalProjectionService.getProjectionsForAllAthletes()).thenReturn(Map.of(
+                1L, List.of(
+                        new MedalProjection("LIBRE", 100, "MAYOR", Classification.POR_ENCIMA_DEL_PODIO,
+                                new BigDecimal("64.000"), new BigDecimal("-1.000")),
+                        new MedalProjection("LIBRE", 100, "MAYOR", Classification.POR_ENCIMA_DEL_PODIO,
+                                new BigDecimal("66.000"), new BigDecimal("1.000"))),
+                2L, List.of(
+                        new MedalProjection("LIBRE", 100, "MAYOR", Classification.POR_ENCIMA_DEL_PODIO,
+                                new BigDecimal("63.000"), new BigDecimal("-2.000")))));
 
         TeamReportResponse report = service.assembleTeamReport(null);
 
@@ -88,12 +88,12 @@ class TeamReportingServiceTest {
     void assembleTeamReport_filtraPorCategoria() {
         when(athleteRepository.findAllByDeletedAtIsNull(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(juan)));
-        when(medalProjectionService.getProjectionsForAthlete(1L)).thenReturn(List.of(
-                new MedalProjection("LIBRE", 100, "MAYOR", Classification.POR_ENCIMA_DEL_PODIO,
-                        new BigDecimal("64.000"), new BigDecimal("-1.000")),
-                new MedalProjection("LIBRE", 100, "JUVENIL", Classification.POR_ENCIMA_DEL_PODIO,
-                        new BigDecimal("70.000"), new BigDecimal("5.000"))));
-        when(athleteRepository.findById(1L)).thenReturn(Optional.of(juan));
+        when(medalProjectionService.getProjectionsForAllAthletes()).thenReturn(Map.of(
+                1L, List.of(
+                        new MedalProjection("LIBRE", 100, "MAYOR", Classification.POR_ENCIMA_DEL_PODIO,
+                                new BigDecimal("64.000"), new BigDecimal("-1.000")),
+                        new MedalProjection("LIBRE", 100, "JUVENIL", Classification.POR_ENCIMA_DEL_PODIO,
+                                new BigDecimal("70.000"), new BigDecimal("5.000")))));
 
         TeamReportResponse report = service.assembleTeamReport("MAYOR");
 

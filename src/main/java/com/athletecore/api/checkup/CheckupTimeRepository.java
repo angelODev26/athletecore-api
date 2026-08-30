@@ -23,6 +23,13 @@ public interface CheckupTimeRepository extends JpaRepository<CheckupTime, Long> 
     List<CheckupTime> findActiveByCheckupId(@Param("checkupId") Long checkupId);
 
     /**
+     * Lista todos los tiempos activos. Usado por la agregación en lote del
+     * módulo reportes (evita N+1).
+     */
+    @Query("SELECT ct FROM CheckupTime ct WHERE ct.deletedAt IS NULL")
+    List<CheckupTime> findAllActive();
+
+    /**
      * Verifica si existe un tiempo activo para el mismo (checkup, style, distance).
      */
     @Query("SELECT CASE WHEN COUNT(ct) > 0 THEN TRUE ELSE FALSE END FROM CheckupTime ct "

@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -207,5 +208,32 @@ class MedalProjectionServiceTest {
 
         assertTrue(ex.getMessage().contains("3° puesto"));
         assertTrue(ex.getMessage().contains("LIBRE|100|MAYOR"));
+    }
+
+    @Test
+    @DisplayName("Debe agrupar las proyecciones por atleta en una sola pasada en lote")
+    void getProjectionsForAllAthletes_agrupaPorAtleta_enLote() {
+        Athlete otro = Athlete.builder().id(2L).firstName("Maria").lastName("Lopez").build();
+        Checkup checkup1 = Checkup.builder().id(1L).athlete(athlete).category(CATEGORY).build();
+        Checkup checkup2 = Checkup.builder().id(2L).athlete(otro).category(CATEGORY).build();
+        CheckupTime ct1 = CheckupTime.builder().id(11L).checkup(checkup1)
+                .style("LIBRE").distance(100).timeSeconds(new BigDecimal("60.000")).build();
+        CheckupTime ct2 = CheckupTime.builder().id(21L).checkup(checkup2)
+                .style("LIBRE").distance(100).timeSeconds(new BigDecimal("61.000")).build();
+
+        when(checkupRepository.findAllActive()).thenReturn(List.of(checkup1, checkup2));
+        when(checkupTimeRepository.findAllActive()).thenReturn(List.of(ct1, ct2));
+        when(timeComparisonService.loadReferenceTriple("LIBRE", 100, CATEGORY))
+                .thenReturn(List.of(reference(1L, (short) 1, "62.000"),
+                        reference(2L, (short) 2, "63.500"), reference(3L, (short) 3, "65.000")));
+
+        Map<Long, List<MedalProjection>> result = service.getProjectionsForAllAthletes();
+
+        assertEquals(2, result.size());
+        assertTrue(result.containsKey(ATHLETE_ID));
+        assertTrue(result.containsKey(2L));
+        assertEquals(1, result.get(ATHLETE_ID).size());
+        assertEquals(1, result.get(2L).size());
+        verify(timeComparisonService, times(1)).loadReferenceTriple("LIBRE", 100, CATEGORY);
     }
 }
