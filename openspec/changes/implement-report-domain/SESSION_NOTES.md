@@ -23,11 +23,27 @@
 5. **`generated_by`** (FK a users): diferido (YAGNI).
 6. **Filtro de reporte general**: por `category` (no sport/discipline).
 
-## Deudas conocidas (hallazgos auditoría, BAJA, sin corregir)
-- **Soft-delete no propaga a exports**: `softDeleteReport` no marca `deleted_at` en los `report_exports` hijos (quedan huérfanos lógicos; sin fuga directa porque el reporte ya no aparece en listados). Si se requiere integridad estricta, propagar como hace `CheckupService.softDeleteCheckup`.
-- **`generateReport` ante `athleteId` inexistente**: devuelve `201` con `status=FAILED` en vez de `404` (D9 captura `RuntimeException`). Revisar si conviene validar existencia antes de persistir en PENDING.
-- **N+1 en `TeamReportingService`**: `getProjectionsForAthlete` por atleta + `findById` por atleta (parcialmente mitigado por L1 cache). Aceptable a escala <50; `design.md` lo documenta.
+## Deudas resueltas (post-merge, commits en develop)
+- **Soft-delete no propaga a exports** → resuelto en `564c65f`: `ReportGenerationService.softDeleteReport` marca `deleted_at` en los `report_exports` hijos.
+- **`generateReport` ante `athleteId` inexistente → 201 FAILED** → resuelto en `564c65f`: `validateRequest` valida existencia del atleta (vía `AthleteRepository`) y lanza `ResourceNotFoundException` (404) antes de persistir en PENDING.
+- **N+1 en `TeamReportingService`** → resuelto en `66a4b1c`: nuevo `MedalProjectionService.getProjectionsForAllAthletes()` (mapa athleteId → proyecciones) que carga todos los chequeos+tiempos en 2 consultas y comparte la cache de triples; `TeamReportingService` lo consume y resuelve nombres vía mapa en memoria (2 queries en lugar de N×3).
+
+## Deudas restantes (sin corregir)
+- **D5 `medal_projections` sin tabla persistente** (heredada del módulo checkup, confirmada como D3 de este change). Ver detalle preciso abajo.
 - **`DB_PASSWORD` con fallback `postgres`** en `application.properties` (pre-existente, fuera de scope de reportes).
+
+### Detalle preciso de la deuda `medal_projections` (D5/D3)
+**Estado actual:** `MedalProjection` es un `record` JVM (`checkup/MedalProjection.java`) construido en tiempo de consulta por `MedalProjectionService`. No hay tabla ni entidad: se recalcula en cada petición a partir de `CheckupTime` activos + triple de `NationalReferenceTime` por (style, distance, category).
+
+**Por qué NO se materializó (decisión D5 del checkup, reafirmada como D3 del reporte):** la spec `medal-projection` exige "Projection does not mutate state" (operación de solo lectura). Materializar implicaría cache + invalidación ante cualquier edit de `CheckupTime`/`NationalReferenceTime`, duplicando lógica de derivación.
+
+**Qué implicaría resolverla (si alguna vez se requiere):**
+1. Migración `V6` con tabla `medal_projections` (id, athlete_id FK, style, distance, category, classification, time_seconds, diff_vs_bronze_seconds, computed_at) + auditoría + índices parciales.
+2. `MedalProjection` pasar de `record` a `@Entity` (extends `BaseEntity`) + `MedalProjectionRepository`.
+3. **Estrategia de invalidación** (parte difícil): persistir la proyección y re-calcular cuando cambia cualquier `CheckupTime` o `NationalReferenceTime` (touch en los servicios que escriben esas entidades), o cache con TTL. Sin esto, la proyección queda obsoleta.
+4. Revisar la spec `medal-projection` ("Projection does not mutate state") — contradice la persistencia.
+
+**Criterio para activarla:** solo si surge un requisito real (snapshot histórico de proyecciones para exportar, o que el presupuesto de 500 ms/50 atletas se rompa). Hoy no aplica.
 
 ## Siguientes pasos al retomar
 1. Commit de tests (`src/test/java/com/athletecore/api/report/*Test.java`), tasks.md marcado `[x]`, TASKS.md raíz actualizado y este SESSION_NOTES.
