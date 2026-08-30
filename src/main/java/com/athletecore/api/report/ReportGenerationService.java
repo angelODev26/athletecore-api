@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.athletecore.api.athlete.AthleteRepository;
 import com.athletecore.api.common.exception.ResourceNotFoundException;
 import com.athletecore.api.common.exception.ValidationException;
 import com.athletecore.api.report.dto.GenerateReportRequest;
@@ -27,6 +28,7 @@ public class ReportGenerationService {
 
     private final ReportRepository reportRepository;
     private final ReportExportRepository reportExportRepository;
+    private final AthleteRepository athleteRepository;
     private final AthleteReportingService athleteReportingService;
     private final TeamReportingService teamReportingService;
     private final ExportService exportService;
@@ -34,12 +36,14 @@ public class ReportGenerationService {
 
     public ReportGenerationService(ReportRepository reportRepository,
                                    ReportExportRepository reportExportRepository,
+                                   AthleteRepository athleteRepository,
                                    AthleteReportingService athleteReportingService,
                                    TeamReportingService teamReportingService,
                                    ExportService exportService,
                                    Clock clock) {
         this.reportRepository = reportRepository;
         this.reportExportRepository = reportExportRepository;
+        this.athleteRepository = athleteRepository;
         this.athleteReportingService = athleteReportingService;
         this.teamReportingService = teamReportingService;
         this.exportService = exportService;
@@ -128,13 +132,25 @@ public class ReportGenerationService {
     @Transactional
     public void softDeleteReport(Long id) {
         Report report = getReportById(id);
-        report.setDeletedAt(Instant.now(clock));
+        Instant deletedAt = Instant.now(clock);
+
+        List<ReportExport> exports = reportExportRepository.findActiveByReportId(id);
+        if (!exports.isEmpty()) {
+            exports.forEach(e -> e.setDeletedAt(deletedAt));
+            reportExportRepository.saveAll(exports);
+        }
+
+        report.setDeletedAt(deletedAt);
         reportRepository.save(report);
     }
 
     private void validateRequest(GenerateReportRequest request) {
-        if (request.reportType() == ReportType.INDIVIDUAL && request.athleteId() == null) {
-            throw new ValidationException("El reporte individual requiere un athleteId");
+        if (request.reportType() == ReportType.INDIVIDUAL) {
+            if (request.athleteId() == null) {
+                throw new ValidationException("El reporte individual requiere un athleteId");
+            }
+            athleteRepository.findById(request.athleteId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Athlete", "id", request.athleteId()));
         }
     }
 

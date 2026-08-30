@@ -21,6 +21,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.athletecore.api.athlete.Athlete;
+import com.athletecore.api.athlete.AthleteRepository;
+import com.athletecore.api.common.exception.ResourceNotFoundException;
 import com.athletecore.api.common.exception.ValidationException;
 import com.athletecore.api.report.dto.GenerateReportRequest;
 import com.athletecore.api.report.dto.IndividualReportResponse;
@@ -45,6 +48,9 @@ class ReportGenerationServiceTest {
     private ReportExportRepository reportExportRepository;
 
     @Mock
+    private AthleteRepository athleteRepository;
+
+    @Mock
     private AthleteReportingService athleteReportingService;
 
     @Mock
@@ -58,7 +64,7 @@ class ReportGenerationServiceTest {
     @BeforeEach
     void setUp() {
         service = new ReportGenerationService(reportRepository, reportExportRepository,
-                athleteReportingService, teamReportingService, exportService, FIXED_CLOCK);
+                athleteRepository, athleteReportingService, teamReportingService, exportService, FIXED_CLOCK);
     }
 
     @Test
@@ -72,12 +78,24 @@ class ReportGenerationServiceTest {
     }
 
     @Test
+    @DisplayName("Debe lanzar ResourceNotFoundException y no persistir si el atleta no existe")
+    void generateReport_lanza404_siAtletaInexistente() {
+        GenerateReportRequest request = new GenerateReportRequest(
+                ReportType.INDIVIDUAL, 999L, null, null, null, "Reporte individual");
+        when(athleteRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.generateReport(request));
+        verify(reportRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Debe cerrar un reporte individual en GENERATED y delegar el export")
     void generateReport_individual_exitoso() {
         GenerateReportRequest request = new GenerateReportRequest(
                 ReportType.INDIVIDUAL, 7L, null, null, null, "Reporte individual");
         when(reportRepository.save(any(Report.class))).thenAnswer(inv -> inv.getArgument(0));
         when(reportExportRepository.findActiveByReportId(any())).thenReturn(List.of());
+        when(athleteRepository.findById(7L)).thenReturn(Optional.of(Athlete.builder().id(7L).build()));
         when(athleteReportingService.assembleIndividualReport(7L))
                 .thenReturn(new IndividualReportResponse(7L, "Juan Perez", List.of(), null, List.of()));
 
@@ -94,6 +112,7 @@ class ReportGenerationServiceTest {
                 ReportType.INDIVIDUAL, 7L, null, null, null, "Reporte individual");
         when(reportRepository.save(any(Report.class))).thenAnswer(inv -> inv.getArgument(0));
         when(reportExportRepository.findActiveByReportId(any())).thenReturn(List.of());
+        when(athleteRepository.findById(7L)).thenReturn(Optional.of(Athlete.builder().id(7L).build()));
         when(athleteReportingService.assembleIndividualReport(7L))
                 .thenThrow(new RuntimeException("Error de ensamblado"));
 
@@ -144,10 +163,27 @@ class ReportGenerationServiceTest {
         Report report = Report.builder().id(5L).reportType(ReportType.GENERAL)
                 .title("R5").status(ReportStatus.GENERATED).build();
         when(reportRepository.findById(5L)).thenReturn(Optional.of(report));
+        when(reportExportRepository.findActiveByReportId(5L)).thenReturn(List.of());
 
         service.softDeleteReport(5L);
 
         assertNotNull(report.getDeletedAt());
         verify(reportRepository).save(report);
+    }
+
+    @Test
+    @DisplayName("Debe propagar el soft delete a los exports del reporte")
+    void softDeleteReport_propagaAExports() {
+        Report report = Report.builder().id(5L).reportType(ReportType.GENERAL)
+                .title("R5").status(ReportStatus.GENERATED).build();
+        ReportExport export = ReportExport.builder().id(1L).report(report)
+                .fileName("reporte-general-5.pdf").content(new byte[]{1, 2, 3}).build();
+        when(reportRepository.findById(5L)).thenReturn(Optional.of(report));
+        when(reportExportRepository.findActiveByReportId(5L)).thenReturn(List.of(export));
+
+        service.softDeleteReport(5L);
+
+        assertNotNull(export.getDeletedAt());
+        verify(reportExportRepository).saveAll(any());
     }
 }
