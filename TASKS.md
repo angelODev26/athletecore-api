@@ -122,30 +122,55 @@
 
 ---
 
+## 📱 Check de contrato Frontend (2026-08-29)
+
+### ⚠️ Bloqueante de auth — refresh tokens JWT
+El flujo actual solo emite **access token** (`JwtService.generateToken`, expiración por defecto 24 h vía `spring.security.jwt.expiration`). **No existe refresh token**, por lo que el frontend forzará re-login al expirar el token (cada 24 h por defecto). Si se requieren sesiones largas sin rehacer el login flow, implementar refresh tokens ANTES de construir las pantallas de auth.
+
+### ⚠️ Paginar antes de consumir en frontend
+Solo `GET /api/v1/athletes` (`AthleteController`) tiene paginación (`Pageable`). El resto devuelve listas completas sin paginación y **deben paginarse antes de usarse en tablas/listas del frontend**:
+- `GET /api/v1/users` (UserController)
+- `GET /api/v1/training-plans` (TrainingPlanController)
+- `GET /api/v1/athletes/{id}/checkups` y `GET /api/v1/national-reference-times` (CheckupController / NationalReferenceTimeController)
+- `GET /api/v1/reports` (ReportController — filtro en memoria)
+- `GET /api/v1/report-schedules` (ReportScheduleController)
+- `GET /api/v1/alerts/attendance` (AlertController)
+
+El resto de performance (Redis, optimización de queries) queda diferido a POST-v1.0.0.
+
+---
+
 ## 🔧 Mejoras de Infraestructura
 
-### Seguridad Avanzada
+> ⏸️ **CONGELADO — POST-v1.0.0 / PRE-PRODUCCIÓN (2026-08-29).**
+> El core funcional (módulos v0.1.0–v0.5.0) está completo y verificado. La prioridad
+> ahora es el **frontend**; estas 5 categorías (Seguridad avanzada, Observabilidad,
+> Performance, DevOps/CI y Tests/Docs) **NO bloquean** el arranque del frontend y se
+> retoman en la fase PRE-PRODUCCIÓN, antes del release v1.0.0. Se conservan aquí como
+> backlog de referencia para no perder contexto al retomar.
+
+### Seguridad Avanzada — POST-v1.0.0
 - [ ] Implementar refresh tokens JWT
 - [ ] Agregar rate limiting (Redis o memoria)
 - [ ] Protección contra brute force (account lockout)
 - [ ] MFA/2FA para roles administrativos
 - [ ] Audit log de acciones sensibles
 
-### Observabilidad
+### Observabilidad — POST-v1.0.0
 - [ ] Integrar Spring Boot Actuator
 - [ ] Configurar métricas en Prometheus
 - [ ] Logs estructurados en JSON (producción)
 - [ ] Health checks personalizados (DB, Redis, etc.)
 - [ ] Distributed tracing (OpenTelemetry)
 
-### Performance
+### Performance — POST-v1.0.0
 - [ ] Implementar caching con Redis
 - [ ] Database connection pool optimization
 - [ ] Query optimization e índice adicional
 - [ ] paginación en endpoints de listado
 - [ ] Async processing para reportes pesados
 
-### DevOps
+### DevOps — POST-v1.0.0
 - [ ] Dockerfile multi-stage (optimizado)
 - [ ] CI/CD pipeline (GitHub Actions)
 - [ ] Health checks en Kubernetes (si aplica)
@@ -156,13 +181,13 @@
 
 ## 📝 Technical Debt (Pendientes)
 
-### Documentación
+### Documentación — POST-v1.0.0
 - [ ] OpenAPI/Swagger documentation
 - [ ] API README completo (endpoints, ejemplos)
 - [ ] Diagramas de arquitectura
 - [ ] Guías de desarrollo nuevo módulo
 
-### Tests
+### Tests — POST-v1.0.0
 - [ ] Integration tests para todos los módulos
 - [ ] E2E tests críticos
 - [ ] Test containers para PostgreSQL
@@ -188,7 +213,7 @@
 - Perfil antropométrico
 - Gestión de deportes/disciplinas
 
-### v0.3.0 - Módulo Entrenamientos
+### v0.3.0 - Módulo Entrenamientos ✅
 - Planificación anual
 - Sesiones y ciclos
 - Control de asistencia
