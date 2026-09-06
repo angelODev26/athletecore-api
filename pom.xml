@@ -74,6 +74,13 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- OpenAPI/Swagger: contrato de la API para el frontend (compatible con Spring Boot 3.5.x) -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.9.0</version>
+		</dependency>
+
 		<!-- Generación de PDF para el módulo de reportes (decisión D1 del design) -->
 		<dependency>
 			<groupId>com.github.librepdf</groupId>
