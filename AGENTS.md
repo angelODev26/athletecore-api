@@ -35,6 +35,12 @@ Specialized subagents exist per module (see `.opencode/agents/` and `.claude/age
 athlete-domain, training-domain, checkup-domain, report-domain, user-security,
 backend-architect, quality-guardian. Delegate module-specific work to them.
 
+## Quality review
+Run `/review [rutas]` (Claude Code y OpenCode) tras terminar una tarea: invoca a
+`quality-guardian` con el alcance (los archivos dados, o los cambios sin commitear /
+último commit si no das rutas) y genera un reporte con evidencia `archivo:línea`
+priorizado por severidad. Solo lectura — nunca modifica código.
+
 ## Testing
 
 - Service tests: JUnit 5 + MockitoExtension (no Spring context), Spanish `@DisplayName`. Coverage target >80% per TASKS.md.
