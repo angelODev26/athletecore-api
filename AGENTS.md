@@ -27,6 +27,7 @@ Spring Boot 3.5.6 REST API (Java 21, Maven, PostgreSQL 15, Flyway, JWT, Lombok) 
 ## Workflow
 
 - Roadmap and per-module status: `TASKS.md`. It assigns modules to agent role files in `.claude/agents/`.
+- Handoff de frontend: `docs/frontend-handoff/` (00–09 describe el contrato completo de la API, decisiones y deuda). El diagrama de flujo completo vive DENTRO del repo, en `docs/frontend-handoff/flujo-completo-athletecore.md` (junto al handoff, ubicación canónica).
 - New features go through OpenSpec: use the `openspec-propose` / `openspec-apply-change` skills. Delta specs live in `openspec/changes/`, main specs in `openspec/specs/`.
 - Current branch `feature/implement-athlete-domain` contains **uncommitted WIP** (athlete module, TASKS.md, OpenSpec change) — do not commit without asking.
 
