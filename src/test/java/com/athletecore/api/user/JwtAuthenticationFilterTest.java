@@ -168,4 +168,21 @@ class JwtAuthenticationFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(filterChain).doFilter(request, response);
     }
+
+    @Test
+    @DisplayName("Debe rechazar un refresh token presentado como credencial de acceso")
+    void doFilter_refreshTokenComoBearer_noAutentica() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer refresh-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
+
+        when(jwtService.isRefreshToken("refresh-token")).thenReturn(true);
+
+        filter.doFilter(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+        verifyNoInteractions(userDetailsService);
+    }
 }

@@ -103,7 +103,7 @@ class AthleteSportServiceTest {
         // Arrange
         AssignSportsRequest request = new AssignSportsRequest(Set.of(1L, 99L));
         when(athleteRepository.findById(1L)).thenReturn(Optional.of(athlete));
-        when(sportRepository.findById(1L)).thenReturn(Optional.of(swimming));
+        lenient().when(sportRepository.findById(1L)).thenReturn(Optional.of(swimming));
         when(sportRepository.findById(99L)).thenReturn(Optional.empty());
 
         // Act & Assert

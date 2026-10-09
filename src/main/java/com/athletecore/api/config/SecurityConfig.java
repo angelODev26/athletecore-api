@@ -43,8 +43,8 @@ public class SecurityConfig {
                     .authenticationEntryPoint(restAuthenticationEntryPoint)
                     .accessDeniedHandler(restAccessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
-                    // Endpoints públicos: registro de usuarios (POST) y login
-                    .requestMatchers(HttpMethod.POST, "/api/v1/users", "/api/v1/auth/login").permitAll()
+                    // Endpoints públicos: registro de usuarios (POST), login y renovación de tokens
+                    .requestMatchers(HttpMethod.POST, "/api/v1/users", "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
                     // Módulo de entrenamientos: solo staff (ADMIN/COACH)
                     .requestMatchers(
                             "/api/v1/training-plans/**",

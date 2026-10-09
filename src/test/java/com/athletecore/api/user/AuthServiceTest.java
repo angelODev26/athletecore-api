@@ -28,6 +28,7 @@ import com.athletecore.api.domain.Role;
 import com.athletecore.api.domain.User;
 import com.athletecore.api.user.dto.AuthResponse;
 import com.athletecore.api.user.dto.LoginRequest;
+import com.athletecore.api.user.dto.RefreshTokenRequest;
 import com.athletecore.api.user.security.JwtService;
 
 /**
@@ -72,16 +73,18 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Debe autenticar y devolver el token cuando las credenciales son válidas")
+    @DisplayName("Debe autenticar y devolver el par de tokens cuando las credenciales son válidas")
     void login_credencialesValidas_devuelveToken() {
         when(userRepository.findByUsername("juan.perez")).thenReturn(Optional.of(user));
         when(jwtService.generateToken(user)).thenReturn("token-generado");
+        when(jwtService.generateRefreshToken(user)).thenReturn("refresh-generado");
         when(jwtService.getExpirationMillis()).thenReturn(86_400_000L);
 
         AuthResponse response = authService.login(loginRequest);
 
         assertNotNull(response);
         assertEquals("token-generado", response.token());
+        assertEquals("refresh-generado", response.refreshToken());
         assertEquals("Bearer", response.type());
         assertEquals(86_400_000L, response.expiresIn());
         assertEquals("juan.perez", response.user().username());
@@ -104,5 +107,76 @@ class AuthServiceTest {
         when(userRepository.findByUsername("juan.perez")).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> authService.login(loginRequest));
+    }
+
+    @Test
+    @DisplayName("Debe renovar la sesión con un par nuevo de tokens cuando el refresh token es válido")
+    void refresh_refreshValido_devuelveParNuevo() {
+        RefreshTokenRequest request = new RefreshTokenRequest("refresh-valido");
+        when(jwtService.isRefreshTokenValid("refresh-valido")).thenReturn(true);
+        when(jwtService.extractUsername("refresh-valido")).thenReturn("juan.perez");
+        when(userRepository.findByUsername("juan.perez")).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(user)).thenReturn("access-nuevo");
+        when(jwtService.generateRefreshToken(user)).thenReturn("refresh-nuevo");
+        when(jwtService.getExpirationMillis()).thenReturn(86_400_000L);
+
+        AuthResponse response = authService.refresh(request);
+
+        assertNotNull(response);
+        assertEquals("access-nuevo", response.token());
+        assertEquals("refresh-nuevo", response.refreshToken());
+        assertEquals("Bearer", response.type());
+        assertEquals("juan.perez", response.user().username());
+    }
+
+    @Test
+    @DisplayName("Debe lanzar InvalidCredentialsException cuando el refresh token es inválido o expirado")
+    void refresh_refreshInvalido_lanzaInvalidCredentials() {
+        RefreshTokenRequest request = new RefreshTokenRequest("refresh-invalido");
+        when(jwtService.isRefreshTokenValid("refresh-invalido")).thenReturn(false);
+
+        assertThrows(InvalidCredentialsException.class, () -> authService.refresh(request));
+    }
+
+    @Test
+    @DisplayName("Debe lanzar InvalidCredentialsException cuando se presenta un access token como refresh")
+    void refresh_accessTokenUsadoComoRefresh_lanzaInvalidCredentials() {
+        // isRefreshTokenValid rechaza tokens sin claim type="refresh"
+        RefreshTokenRequest request = new RefreshTokenRequest("access-token");
+        when(jwtService.isRefreshTokenValid("access-token")).thenReturn(false);
+
+        assertThrows(InvalidCredentialsException.class, () -> authService.refresh(request));
+    }
+
+    @Test
+    @DisplayName("Debe lanzar InvalidCredentialsException cuando el usuario del refresh token ya no existe")
+    void refresh_usuarioInexistente_lanzaInvalidCredentials() {
+        RefreshTokenRequest request = new RefreshTokenRequest("refresh-valido");
+        when(jwtService.isRefreshTokenValid("refresh-valido")).thenReturn(true);
+        when(jwtService.extractUsername("refresh-valido")).thenReturn("usuario.eliminado");
+        when(userRepository.findByUsername("usuario.eliminado")).thenReturn(Optional.empty());
+
+        assertThrows(InvalidCredentialsException.class, () -> authService.refresh(request));
+    }
+
+    @Test
+    @DisplayName("Debe lanzar InvalidCredentialsException cuando el usuario del refresh token está deshabilitado")
+    void refresh_usuarioDeshabilitado_lanzaInvalidCredentials() {
+        User disabledUser = User.builder()
+                .id(1L)
+                .username("juan.perez")
+                .email("juan@example.com")
+                .password("encoded-password")
+                .firstName("Juan")
+                .lastName("Pérez")
+                .enabled(false)
+                .roles(user.getRoles())
+                .build();
+        RefreshTokenRequest request = new RefreshTokenRequest("refresh-valido");
+        when(jwtService.isRefreshTokenValid("refresh-valido")).thenReturn(true);
+        when(jwtService.extractUsername("refresh-valido")).thenReturn("juan.perez");
+        when(userRepository.findByUsername("juan.perez")).thenReturn(Optional.of(disabledUser));
+
+        assertThrows(InvalidCredentialsException.class, () -> authService.refresh(request));
     }
 }

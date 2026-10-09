@@ -44,14 +44,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                String username = jwtService.extractUsername(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                if (jwtService.isTokenValid(token, userDetails)) {
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.debug("Usuario autenticado con JWT: {}", username);
+                // Los refresh tokens no son credenciales de acceso: si el token
+                // declara type="refresh" se ignora y la petición continúa sin
+                // autenticar (los endpoints protegidos responderán 401).
+                if (jwtService.isRefreshToken(token)) {
+                    log.debug("Se presentó un refresh token como credencial de acceso; se rechaza");
+                } else {
+                    String username = jwtService.extractUsername(token);
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    if (jwtService.isTokenValid(token, userDetails)) {
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        log.debug("Usuario autenticado con JWT: {}", username);
+                    }
                 }
             } catch (Exception ex) {
                 // Token inválido o usuario inexistente: se continúa sin autenticar

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.athletecore.api.user.dto.AuthResponse;
 import com.athletecore.api.user.dto.LoginRequest;
+import com.athletecore.api.user.dto.RefreshTokenRequest;
 
 import jakarta.validation.Valid;
 
@@ -32,5 +33,15 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         return ResponseEntity.ok(authService.login(loginRequest));
+    }
+
+    /**
+     * Renueva la sesión a partir de un refresh token válido, devolviendo un
+     * par nuevo de tokens (access + refresh) con rotación.
+     * POST /api/v1/auth/refresh (público)
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest refreshRequest) {
+        return ResponseEntity.ok(authService.refresh(refreshRequest));
     }
 }
