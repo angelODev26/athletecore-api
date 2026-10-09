@@ -124,8 +124,16 @@
 
 ## 📱 Check de contrato Frontend (2026-08-29)
 
-### ⚠️ Bloqueante de auth — refresh tokens JWT
-El flujo actual solo emite **access token** (`JwtService.generateToken`, expiración por defecto 24 h vía `spring.security.jwt.expiration`). **No existe refresh token**, por lo que el frontend forzará re-login al expirar el token (cada 24 h por defecto). Si se requieren sesiones largas sin rehacer el login flow, implementar refresh tokens ANTES de construir las pantallas de auth.
+### ✅ Bloqueante de auth RESUELTO — refresh tokens JWT (implementado)
+El login ahora emite **access + refresh token** (`JwtService.generateToken` /
+`generateRefreshToken`) y existe `POST /api/v1/auth/refresh` público con rotación
+(par nuevo en cada llamada). Expiraciones: access 24 h (`spring.security.jwt.expiration`),
+refresh 7 días (`spring.security.jwt.refresh-expiration`). Notas para el front:
+- La renovación NO revoca el refresh anterior en servidor (rotación sin estado);
+  si se requiere revocación estricta (tabla de refresh tokens), es un change aparte
+  sin cambio de contrato.
+- Contrato completo en `docs/frontend-handoff/02-autenticacion-y-seguridad.md` §1–2
+  y `03-contrato-api-usuarios.md` §2–2.1.
 
 ### ⚠️ Paginar antes de consumir en frontend
 Solo `GET /api/v1/athletes` (`AthleteController`) tiene paginación (`Pageable`). El resto devuelve listas completas sin paginación y **deben paginarse antes de usarse en tablas/listas del frontend**:
@@ -150,7 +158,8 @@ El resto de performance (Redis, optimización de queries) queda diferido a POST-
 > backlog de referencia para no perder contexto al retomar.
 
 ### Seguridad Avanzada — POST-v1.0.0
-- [ ] Implementar refresh tokens JWT
+- [x] Implementar refresh tokens JWT
+- [ ] Revocación de refresh tokens con estado (tabla + detección de reuso) — mejora opcional sobre la rotación actual
 - [ ] Agregar rate limiting (Redis o memoria)
 - [ ] Protección contra brute force (account lockout)
 - [ ] MFA/2FA para roles administrativos
