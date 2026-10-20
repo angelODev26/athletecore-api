@@ -52,11 +52,13 @@ de arquitectura 4) y `TASKS.md` (User/Security).
   con `username`, `email` y **hash BCrypt** tomados de placeholders de Flyway
   alimentados por variables de entorno (`ADMIN_USERNAME`, `ADMIN_EMAIL`,
   `ADMIN_PASSWORD_HASH`), y le asigna `ROLE_ADMIN`.
-- Idempotente: `ON CONFLICT (username) DO NOTHING`, no sobrescribe un usuario
-  existente ni su password/estado; solo crea el vínculo `user_roles` si falta.
-- Fail-fast: sin `ADMIN_PASSWORD_HASH` la aplicación no arranca (placeholder no
-  resuelto). En `application-local.properties` (gitignored) hay un hash de
-  desarrollo documentado.
+- Idempotente y fail-closed: si el usuario ya existe solo se añade el vínculo
+  `ROLE_ADMIN` cuando el hash almacenado es exactamente el configurado, la cuenta
+  está habilitada y sin soft delete; en cualquier otro caso la migración aborta
+  sin promover la cuenta. No sobrescribe password/estado/roles.
+- Fail-fast: sin `ADMIN_PASSWORD_HASH` (o con uno vacío/malformado) la aplicación
+  no arranca. En `application-local.properties.example` (versionado) hay un hash
+  de desarrollo documentado.
 - Runbook de generación del hash y rotación de la contraseña en `README.md` /
   `.env.example`.
 

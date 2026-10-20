@@ -130,6 +130,26 @@ class UserControllerSecurityTest {
 
     @Test
     @WithMockUser(roles = "USER")
+    @DisplayName("GET /users/{id} con USER devuelve 403 por la regla de URL (sin handler)")
+    void getUsersSubpath_conRolUser_devuelveForbiddenPorReglaDeUrl() throws Exception {
+        // No hay handler para /users/{id}: solo la regla de URL de
+        // SecurityConfig puede producir un 403 (sin ella, el dispatch daría
+        // 404/405). Es el test discriminante de la defensa por path.
+        mockMvc.perform(get(BASE_URL + "/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("listar usuarios sin autenticación devuelve 401")
+    void getAllUsers_sinAutenticacion_devuelveUnauthorized() throws Exception {
+        mockMvc.perform(get(BASE_URL))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(userService);
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
     @DisplayName("listar usuarios con rol USER devuelve 403")
     void getAllUsers_conRolUser_devuelveForbidden() throws Exception {
         mockMvc.perform(get(BASE_URL))

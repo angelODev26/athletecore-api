@@ -36,6 +36,10 @@ no arranca (fail-fast). Generación:
 htpasswd -bnBC 12 "" 'mi-password' | tr -d ':\n'
 ```
 
+En `.env` para Docker Compose, el hash va entre **comillas simples**
+(`ADMIN_PASSWORD_HASH='$2y$12$...'`): Compose interpreta `$` como variable y sin
+comillas el hash llega truncado.
+
 En local no hace falta: el ejemplo versionado
 `src/main/resources/application-local.properties.example` trae el hash de
 desarrollo documentado (`admin` / `admin123`); cópialo o mézclalo en tu
@@ -310,8 +314,9 @@ flyway migrate
 # Configurar .env con variables locales
 cp .env.example .env
 # Edita .env con configuración local. Para el seed del admin (V6) define
-# ADMIN_PASSWORD_HASH (hash BCrypt); o usa el perfil local, que trae un
-# admin de desarrollo (admin / admin123).
+# ADMIN_PASSWORD_HASH entre comillas simples (por el '$' de Compose); o copia
+# application-local.properties.example, que trae el admin de desarrollo
+# (admin / admin123).
 
 # Ejecutar con Maven
 ./mvnw spring-boot:run

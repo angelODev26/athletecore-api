@@ -101,7 +101,8 @@ MUST NOT arrancar si falta el hash o si no es un hash BCrypt válido. La migraci
 SHALL ser idempotente y no intrusiva: si ya existe un usuario con ese username,
 MUST NOT duplicarlo ni sobrescribir su password, su estado `enabled` ni sus
 roles; SHALL añadir el vínculo con `ROLE_ADMIN` solo si la cuenta existente
-demuestra ser la sembrada (misma password que el hash configurado, `enabled =
+demuestra ser la sembrada (el mismo hash BCrypt configurado, comparación exacta
+—el salting hace que la misma contraseña produzca hashes distintos—, `enabled =
 true` y sin soft delete). En cualquier otro caso MUST abortar con un error
 accionable, sin promover la cuenta. Si el email ya está en uso por otro usuario,
 MUST abortar. La contraseña MUST almacenarse como hash BCrypt, nunca en texto
@@ -128,7 +129,7 @@ plano.
 - **THEN** la migración aborta, no concede `ROLE_ADMIN` y no modifica la cuenta
 
 #### Scenario: Cuenta sembrada sin el vínculo de rol
-- **WHEN** el usuario configurado existe con la misma password del seed, está
+- **WHEN** el usuario configurado existe con el mismo hash BCrypt del seed, está
   habilitado, sin soft delete y no tiene `ROLE_ADMIN`
 - **THEN** la migración añade únicamente el vínculo `user_roles` con `ROLE_ADMIN`
   sin tocar el resto de roles

@@ -80,6 +80,12 @@ htpasswd -bnBC 12 "" 'mi-password' | tr -d ':\n'
 # $2y$12$...
 ```
 
+> **Docker Compose:** el hash contiene `$` y Compose lo interpreta como variable.
+> En `.env`, rodéalo de **comillas simples**: `ADMIN_PASSWORD_HASH='$2y$12$...'`.
+> Sin comillas se trunca (por ejemplo `$f` se sustituye por vacío) y V6 aborta.
+> `ADMIN_USERNAME` y `ADMIN_EMAIL` no deben contener una comilla simple (`'`):
+> se interpolan en literales SQL y romperían el script.
+
 En producción, definir `ADMIN_PASSWORD_HASH` con ese valor. En local, el ejemplo
 versionado `src/main/resources/application-local.properties.example` trae el hash
 de desarrollo documentado (`admin` / `admin123`); cópialo o mézclalo en tu
@@ -92,11 +98,12 @@ externas.
   resuelto). Si está definido pero vacío o no es un BCrypt válido (60 chars,
   `$2a/$2b/$2y`), la migración aborta con un error accionable. Deliberado: evita
   desplegar sin ninguna vía de administración o con una credencial inválida.
-- **No intrusiva**: si el username ya existe, solo se añade `ROLE_ADMIN` cuando la
-  cuenta coincide con el hash configurado, está `enabled` y sin soft delete. Si
-  no, la migración aborta: **nunca promueve** una cuenta preexistente (por
-  ejemplo, un `admin` registrado por el antiguo registro público) ni sobrescribe
-  su password, estado o roles.
+- **No intrusiva**: si el username ya existe, solo se añade `ROLE_ADMIN` cuando el
+  hash almacenado es **exactamente** el configurado (el salting de BCrypt hace que
+  la misma contraseña produzca hashes distintos), la cuenta está `enabled` y sin
+  soft delete. Si no, la migración aborta: **nunca promueve** una cuenta
+  preexistente (por ejemplo, un `admin` registrado por el antiguo registro
+  público) ni sobrescribe su password, estado o roles.
 - **Email en uso**: si `ADMIN_EMAIL` pertenece a otro usuario, aborta con un
   mensaje que pide configurar otro email.
 - **Vínculo de rol**: si la cuenta sembrada ya existe pero le falta `ROLE_ADMIN`,
@@ -106,6 +113,34 @@ externas.
   documentado (o el futuro endpoint de password, deuda T8).
 - **Username soft-deleted**: la migración aborta con un mensaje accionable;
   restaurar la cuenta o elegir otro `ADMIN_USERNAME`.
+
+### Bases ya migradas con una versión anterior de V6
+
+Si una base aplicó una versión previa de `V6` (por ejemplo, una copia de trabajo
+creada antes del merge), `validate-on-migrate=true` falla con
+`Migration checksum mismatch for migration version 6`. Opciones:
+
+```bash
+# Reparar el checksum SIN re-ejecutar la migración (conserva los datos)
+docker compose --profile migrate run --rm flyway \
+  -url=jdbc:postgresql://postgres:5432/${DB_NAME:-athletecore} \
+  -userid=${DB_USER:-athletecore_user} -password=${DB_PASSWORD:-athletecore_pass} \
+  -locations=filesystem:/flyway-local \
+  repair
+
+# Alternativa en dev si la base es desechable (borra el volumen)
+docker compose down -v
+```
+
+`repair` realinea el checksum y **no** vuelve a ejecutar la nueva lógica: si la
+base tenía la versión antigua, sus datos quedan como estaban (la nueva
+validación solo se aplica en bases donde V6 aún no se ejecutó). `mvn flyway:repair`
+no existe en este repo (no hay plugin de Flyway en `pom.xml`).
+
+> **Tests:** el `@SpringBootTest` aplica las migraciones sobre la BD configurada.
+> Si esa base tiene un `admin` con **otro** hash (por ejemplo, uno registrado por
+> el antiguo registro público), V6 aborta y `./mvnw test` falla: usa una base de
+> test dedicada (`DB_URL`) o audita/renombra ese usuario antes.
 
 ### Verificación post-deploy
 
@@ -160,25 +195,14 @@ spring.flyway.baseline-on-migrate=true     # Crear baseline solo la primera vez
 java -jar target/athletecore-api-0.0.1-SNAPSHOT.jar
 ```
 
-**Con Maven plugin (desarrollo)**:
+**Con Docker Compose** (servicio `flyway`, perfil `migrate`):
 ```bash
-# Ejecutar migraciones
-mvn flyway:migrate
-
-# Ver estado de migraciones
-mvn flyway:info
-
-# Validar scripts
-mvn flyway:validate
+docker compose --profile migrate up flyway
 ```
 
-**Con script de utilidad (opcional)**:
-```bash
-./scripts/flyway.sh migrate      # Ejecutar migraciones
-./scripts/flyway.sh validate     # Validar scripts
-./scripts/flyway.sh info         # Ver estado
-./scripts/flyway.sh baseline 1   # Crear baseline inicial
-```
+**Con Maven**: este repo **no** tiene el plugin de Flyway configurado, así que
+`mvn flyway:migrate|info|validate|repair` no están disponibles. Usa Spring Boot
+(que ejecuta Flyway al arrancar) o el servicio de Compose de arriba.
 
 ### Validar migraciones antes de producción
 
@@ -213,7 +237,7 @@ mvn flyway:baseline -Dflyway.baselineVersion=1
 | `DB_PASSWORD` | Contraseña de PostgreSQL | `postgres` |
 | `ADMIN_USERNAME` | Username del admin inicial (V6) | `admin` |
 | `ADMIN_EMAIL` | Email del admin inicial (V6) | `admin@athletecore.local` |
-| `ADMIN_PASSWORD_HASH` | Hash BCrypt del admin inicial (V6) | **obligatorio** (local tiene default de desarrollo) |
+| `ADMIN_PASSWORD_HASH` | Hash BCrypt del admin inicial (V6) | **obligatorio** (copia el default de `application-local.properties.example` en local) |
 
 ## Consideraciones importantes
 
@@ -244,7 +268,7 @@ datos de negocio volátiles no van aquí.
 - ✅ `V1__initial_schema.sql` — solo esquema.
 - ✅ `V2`/`V3` — esquema + seed de catálogos estables (`ROLE_*`, deportes).
 - ✅ `V6` — bootstrap del admin inicial desde placeholders de entorno, idempotente
-  (`ON CONFLICT ... DO NOTHING`).
+  y fail-closed (no promueve cuentas preexistentes no confiables).
 - ❌ Datos de negocio, fixtures de demo o cualquier seed que pise filas existentes.
 - ❌ Contraseñas en claro: siempre hash BCrypt vía `ADMIN_PASSWORD_HASH`.
 

@@ -27,6 +27,9 @@ services:
     profiles:
       - default
       - full
+      - migrate
+      - development
+      - production
 
   # ========================================
   # FLYWAY (MIGRACIONES)
@@ -44,7 +47,7 @@ services:
       - -locations=filesystem:/flyway-local
       - -placeholders.admin_username=${ADMIN_USERNAME:-admin}
       - -placeholders.admin_email=${ADMIN_EMAIL:-admin@athletecore.local}
-      - -placeholders.admin_password_hash=${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH es obligatorio para el seed V6}
+      - -placeholders.admin_password_hash=${ADMIN_PASSWORD_HASH:-}
       - migrate
     environment:
       - FLYWAY_SCHEMAS=public
@@ -81,7 +84,7 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@athletecore.local}
-      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH es obligatorio para el seed V6}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
     ports:
       - "8080:8080"
     volumes:
@@ -121,7 +124,7 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@athletecore.local}
-      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH es obligatorio para el seed V6}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
     ports:
       - "8080:8080"
     depends_on:

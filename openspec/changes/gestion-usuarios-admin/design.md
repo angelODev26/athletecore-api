@@ -102,21 +102,17 @@ endpoint (patrón ya usado en `getAllUsers`).
 
 ### D4 — P3 con Flyway + placeholders (hash, no contraseña en claro)
 
-Migración SQL `V6__seed_admin_usuario_inicial.sql`:
+Migración SQL `V6__seed_admin_usuario_inicial.sql` con un bloque PL/pgSQL que:
 
-```sql
-INSERT INTO users (username, email, password, first_name, last_name, enabled)
-VALUES ('${admin_username}', '${admin_email}', '${admin_password_hash}',
-        'Administrador', 'Inicial', TRUE)
-ON CONFLICT (username) DO NOTHING;
+1. valida username/email no vacíos (normalizados con `btrim`) y un hash BCrypt
+   con coste 04-31 y charset base64;
+2. si el username no existe, crea el usuario y el vínculo `user_roles` con
+   `ROLE_ADMIN`;
+3. si el username ya existe, **solo** añade el vínculo cuando el hash almacenado
+   es exactamente el configurado, la cuenta está `enabled` y sin soft delete; en
+   cualquier otro caso aborta con un mensaje accionable.
 
-INSERT INTO user_roles (user_id, role_id)
-SELECT u.id, r.id
-FROM users u, roles r
-WHERE u.username = '${admin_username}' AND r.name = 'ROLE_ADMIN'
-  AND NOT EXISTS (SELECT 1 FROM user_roles ur
-                  WHERE ur.user_id = u.id AND ur.role_id = r.id);
-```
+El SQL real es la fuente de verdad; no se duplica aquí para evitar deriva.
 
 - **Placeholders** (`spring.flyway.placeholders.*`) alimentados por entorno:
   `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`.
@@ -124,9 +120,11 @@ WHERE u.username = '${admin_username}' AND r.name = 'ROLE_ADMIN'
   defecto (`${ADMIN_PASSWORD_HASH}`); si falta, Spring no arranca (placeholder no
   resuelto). Es deliberado: un entorno sin admin usable tras cerrar el registro
   queda bloqueado, y es mejor fallar al desplegar que descubrirlo después.
-- **Dev**: `application-local.properties` (gitignored) define un hash BCrypt de
-  una contraseña de desarrollo documentada; el `.env.example` explica cómo
-  generar uno (`htpasswd -bnBC 12 "" 'mi-password'`).
+- **Dev**: `application-local.properties` está gitignored; el ejemplo versionado
+  `application-local.properties.example` trae el hash BCrypt de una contraseña de
+  desarrollo documentada y se copia/mezcla en el archivo local. El `.env.example`
+  explica cómo generar uno (`htpasswd -bnBC 12 "" 'mi-password'`) y que en
+  Docker Compose el hash va entre comillas simples por el `$`.
 - **Por qué hash y no contraseña en claro**: nunca se manipula la contraseña en
   texto plano en la migración ni en la BD; el operador genera el hash una vez.
 - **Por qué no `pgcrypto`**: la extensión no está garantizada en todos los
@@ -135,15 +133,18 @@ WHERE u.username = '${admin_username}' AND r.name = 'ROLE_ADMIN'
   en Flyway (`V2`/`V3` siembran roles y deportes) y RNF-04 exige Flyway; un
   initializer en Java duplicaría responsabilidades y no dejaría rastro en
   `flyway_schema_history`.
-- **Validación del hash**: la migración exige un BCrypt válido (60 chars,
-  `$2a/$2b/$2y`) y username/email no vacíos antes de tocar datos. Un
-  `ADMIN_PASSWORD_HASH` vacío (variable definida sin valor) o en claro aborta.
+- **Validación del hash**: la migración exige un BCrypt válido (60 chars, coste
+  04-31, `$2a/$2b/$2y`, charset base64 de BCrypt) y username/email no vacíos
+  antes de tocar datos. Un `ADMIN_PASSWORD_HASH` vacío, en claro o malformado
+  aborta. `ADMIN_USERNAME`/`ADMIN_EMAIL` no deben contener comilla simple: se
+  interpolan en literales SQL.
 - **Idempotencia y no intromisión**: si el username ya existe, la migración
-  **solo** añade `ROLE_ADMIN` cuando la cuenta demuestra ser la sembrada (misma
-  password que el hash configurado, `enabled = true` y sin soft delete). Si no,
-  aborta con un error accionable: nunca promueve una cuenta preexistente creada
-  por el antiguo registro público. Tampoco sobrescribe password, `enabled` ni
-  roles existentes. Un email ya en uso por otro usuario aborta (UNIQUE global).
+  **solo** añade `ROLE_ADMIN` cuando la cuenta demuestra ser la sembrada (mismo
+  hash BCrypt exacto que el configurado —el salting hace que la misma contraseña
+  produzca hashes distintos—, `enabled = true` y sin soft delete). Si no, aborta
+  con un error accionable: nunca promueve una cuenta preexistente creada por el
+  antiguo registro público. Tampoco sobrescribe password, `enabled` ni roles
+  existentes. Un email ya en uso por otro usuario aborta (UNIQUE global).
 - **Tests**: `AthletecoreApiApplicationTests` recibe el placeholder por
   `@SpringBootTest(properties = "spring.flyway.placeholders.admin_password_hash=...")`
   para que el contexto arranque sin depender de una env externa.
@@ -182,9 +183,10 @@ WHERE u.username = '${admin_username}' AND r.name = 'ROLE_ADMIN'
 - **[Bloqueo total si el seed falla y el registro ya está cerrado]** →
   fail-fast del placeholder + runbook de verificación post-deploy (`SELECT` del
   admin) + la migración es idempotente para reintentar.
-- **[Usuario `admin` soft-deleted con el mismo username]** → `ON CONFLICT` evita
-  el error, pero el seed se salta el alta; el runbook indica revisar
-  `users` incluyendo `deleted_at` y elegir otro username o restaurar el usuario.
+- **[Usuario `admin` soft-deleted con el mismo username]** → la migración aborta
+  con un mensaje accionable (no promueve cuentas borradas); el runbook indica
+  revisar `users` incluyendo `deleted_at` y elegir otro username o restaurar el
+  usuario.
 - **[Cambiar `ADMIN_PASSWORD_HASH` después del primer arranque no cambia la
   contraseña]** → Flyway no re-ejecuta `V6`; la rotación es un `UPDATE` manual
   documentado (o un futuro endpoint de password, deuda T8). El runbook lo dice.

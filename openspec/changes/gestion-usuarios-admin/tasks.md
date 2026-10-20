@@ -44,9 +44,11 @@
 ## 3. P3 — Seed del admin inicial
 
 - [x] 3.1 `src/main/resources/db/migration/V6__seed_admin_usuario_inicial.sql`:
-      insertar el usuario con los placeholders `admin_username`, `admin_email`,
-      `admin_password_hash` (`ON CONFLICT (username) DO NOTHING`) y crear el
-      vínculo con `ROLE_ADMIN` solo si falta (D4).
+      bloque PL/pgSQL implementado con validaciones de username/email/hash
+      (BCrypt coste 04-31), normalización `btrim`, alta del usuario + vínculo
+      `ROLE_ADMIN`, y promoción solo de la cuenta sembrada (mismo hash exacto,
+      `enabled`, sin soft delete); aborta si el email está en uso (D4, ver
+      Desviación 2).
 - [x] 3.2 `src/main/resources/application.properties`: mapear
       `spring.flyway.placeholders.admin_username=${ADMIN_USERNAME:admin}`,
       `admin_email=${ADMIN_EMAIL:admin@athletecore.local}` y
@@ -107,10 +109,9 @@
 - [x] 6.1 `./mvnw test` en verde (PostgreSQL vivo para el context test) y
       `./mvnw compile` limpio.
 - [x] 6.2 Ejecutar la matriz manual de §4.3 y anotar el resultado.
-- [x] 6.3 Review del diff: **sustituto** (agente `general`, solo lectura) por no
-      estar `quality-guardian` disponible en la sesión; hallazgos corregidos (ver
-      Desviaciones). **Pendiente re-ejecutar `/review` con `quality-guardian`**
-      antes del merge.
+- [x] 6.3 `/review` con `quality-guardian`: informe recibido (0 bloqueantes,
+      3 ALTO, 6 MEDIO, 6 BAJO) e incorporado; A1-A3 y M1-M6/B1-B6 corregidos
+      (ver Desviaciones 6).
 - [x] 6.4 Avisar al front: P1/P2/P3 entregados (verificados contra código), con
       la forma final del request y el nombre exacto de los roles; el front retoma
       `alta-usuarios-admin`.
@@ -136,5 +137,30 @@
 4. **`application-local.properties.example`** nuevo (versionado) porque el
    archivo real está gitignored y la documentación decía que "traía" el admin de
    desarrollo.
-5. **`docker-compose` ahora exige `ADMIN_PASSWORD_HASH`** (`:?`): el despliegue
-   por compose falla con mensaje claro si falta, en línea con el fail-fast.
+5. **`docker-compose` propaga `ADMIN_*`** con default vacío (`:-`), para no
+   romper `docker compose up -d postgres`; el fail-fast real ocurre en V6 con un
+   mensaje accionable. El hash va entre comillas simples en `.env` (Compose
+   interpreta `$`).
+6. **Review oficial `quality-guardian` (informe A1-A3/M1-M6/B1-B6).** Corregido:
+   - A1: `:?` en compose rompía `docker compose up -d postgres` →
+     `${ADMIN_PASSWORD_HASH:-}`; el fail-fast ocurre en V6.
+   - A2: documentado que el hash va entre comillas simples en `.env` (Compose
+     interpreta `$`); también en README y `docs/flyway.md`.
+   - A3: runbook de `flyway repair` para bases con el V6 anterior (checksum) y
+     aviso del context test sobre un `admin` conflictivo; sin `mvn flyway:repair`
+     (no hay plugin). Se documentó también el flujo real de Compose.
+   - M1: test discriminante de la regla de URL (`GET /users/1` con USER → 403).
+   - M2: regex BCrypt endurecido (coste 04-31 y charset base64).
+   - M3/M4: design/proposal/tasks/flyway sin `ON CONFLICT` ni "misma password";
+     se habla de comparación exacta del hash.
+   - M5: documentado que username/email no admiten comilla simple (los valores se
+     interpolan en SQL; el dollar-quoting con tag no lo sustituye Flyway).
+   - M6/B6: deudas registradas en `TASKS.md` (test de V6 y T11).
+   - B1/B2: soft delete se comprueba antes que el hash; username/email se
+     normalizan con `btrim` y se usan vía variables PL/pgSQL.
+   - B3/B4: corregidas las frases de "el perfil local ya trae" y añadido CORS al
+     `.example`.
+   - B5: 6.3 marcada tras incorporar el informe.
+   - Extra: `postgres` añadido a los perfiles `migrate`/`development`/`production`
+     y retirados de la doc los comandos `mvn flyway:*` / `scripts/flyway.sh`
+     inexistentes.

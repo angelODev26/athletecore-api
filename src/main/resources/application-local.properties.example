@@ -13,6 +13,12 @@
 # ============================================================================
 
 # ============================================================================
+# CORS (el application.properties base lo deja vacío)
+# ============================================================================
+# Sin esto, el front en local no puede llamar a la API.
+spring.web.cors.allowed-origins=${CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+# ============================================================================
 # SEED DEL ADMIN INICIAL (V6)
 # ============================================================================
 # Hash BCrypt de la contraseña de desarrollo 'admin123':
