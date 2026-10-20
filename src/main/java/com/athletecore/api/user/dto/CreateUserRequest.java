@@ -1,5 +1,7 @@
 package com.athletecore.api.user.dto;
 
+import java.util.List;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -29,6 +31,13 @@ public class CreateUserRequest {
     @NotBlank(message = "Password confirmation is mandatory")
     private String confirmPassword;
 
+    /**
+     * Roles solicitados para el usuario. Acepta tanto ADMIN/COACH/USER como
+     * ROLE_ADMIN/ROLE_COACH/ROLE_USER. Si se omite o viene vacío, el servicio
+     * aplica ROLE_USER.
+     */
+    private List<String> roles;
+
     public CreateUserRequest() {}
 
     public CreateUserRequest(String username, String email, String password, String confirmPassword, String firstName, String lastName) {
@@ -38,6 +47,11 @@ public class CreateUserRequest {
         this.confirmPassword = confirmPassword;
         this.firstName = firstName;
         this.lastName = lastName;
+    }
+
+    public CreateUserRequest(String username, String email, String password, String confirmPassword, String firstName, String lastName, List<String> roles) {
+        this(username, email, password, confirmPassword, firstName, lastName);
+        this.roles = roles;
     }
 
     public String getUsername() {
@@ -91,5 +105,13 @@ public class CreateUserRequest {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    public List<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<String> roles) {
+        this.roles = roles;
     }
 }

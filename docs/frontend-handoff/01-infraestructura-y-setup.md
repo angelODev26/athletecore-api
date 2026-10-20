@@ -105,20 +105,17 @@ explícitamente — no es un bug, es la política de seguridad elegida.
 
 ## 5. Base de datos
 
-- PostgreSQL 15. Migraciones Flyway `V1`→`V5` **se aplican solas al arrancar la app**
+- PostgreSQL 15. Migraciones Flyway `V1`→`V6` **se aplican solas al arrancar la app**
   (no hace falta el servicio `flyway` de compose para dev).
 - `ddl-auto=validate`: Hibernate nunca toca el esquema.
 - Los **roles se seedean por migración**: `ROLE_USER` y `ROLE_ADMIN` (V2), `ROLE_COACH` (V3).
-- ⚠️ **No hay usuario admin seedeado.** Todos los registros vía `POST /api/v1/users` reciben
-  siempre `ROLE_USER`. Para tener un ADMIN o COACH en local hay que asignarlo a mano en la DB:
-
-  ```sql
-  INSERT INTO user_roles (user_id, role_id)
-  VALUES (<user_id>, (SELECT id FROM roles WHERE name = 'ROLE_ADMIN'));
-  ```
-
-  (verificar nombre exacto de la tabla puente en V1 — puede variar; esto está detallado
-  en el archivo `02`.)
+- **El primer ADMIN nace del seed `V6`** (`V6__seed_admin_usuario_inicial.sql`): lee
+  `ADMIN_USERNAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD_HASH` (hash BCrypt) del entorno.
+  En local, `application-local.properties` trae un admin de desarrollo
+  (`admin` / `admin123`) para no depender de variables externas. Sin el hash, la app
+  **no arranca** (fail-fast): el registro público está cerrado y un entorno sin admin
+  quedaría bloqueado. Runbook en `docs/flyway.md`.
+- Para cambiar el rol de un usuario ya creado no hay endpoint: se hace en DB (deuda T8).
 
 ---
 

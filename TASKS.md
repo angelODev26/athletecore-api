@@ -135,6 +135,20 @@ refresh 7 días (`spring.security.jwt.refresh-expiration`). Notas para el front:
 - Contrato completo en `docs/frontend-handoff/02-autenticacion-y-seguridad.md` §1–2
   y `03-contrato-api-usuarios.md` §2–2.1.
 
+### ✅ Gestión de usuarios administrativa (implementada — change `gestion-usuarios-admin`)
+- **Registro público cerrado:** `POST /api/v1/users` requiere `ROLE_ADMIN`
+  (regla de URL + `@PreAuthorize`); solo login y refresh son públicos.
+- **Alta con roles:** el ADMIN crea usuarios con `roles` (`ADMIN`/`COACH`/`USER`,
+  alias con o sin prefijo `ROLE_`); sin `roles` se aplica `ROLE_USER`. Catálogo
+  cerrado; rol inválido → 400.
+- **Roles en `UserResponse`:** login, refresh, `GET /users` y el 201 de creación
+  devuelven `roles[]` ordenado (nombres `ROLE_*`, iguales al claim del JWT).
+- **Admin inicial:** seed Flyway `V6` con `ADMIN_USERNAME`/`ADMIN_EMAIL`/
+  `ADMIN_PASSWORD_HASH` (BCrypt, obligatorio). Runbook en `docs/flyway.md`.
+- Contrato completo en `docs/frontend-handoff/03-contrato-api-usuarios.md` §3–5.
+- **Sigue faltando** (T8): `PUT /users/{id}` (roles, `enabled`, password),
+  `DELETE`, `/me`, logout. Cambiar roles hoy = DB.
+
 ### ⚠️ Paginar antes de consumir en frontend
 Solo `GET /api/v1/athletes` (`AthleteController`) tiene paginación (`Pageable`). El resto devuelve listas completas sin paginación y **deben paginarse antes de usarse en tablas/listas del frontend**:
 - `GET /api/v1/users` (UserController)
@@ -285,7 +299,7 @@ El resto de performance (Redis, optimización de queries) queda diferido a POST-
 
 | Módulo | Estado | Completado | Pendiente |
 |--------|--------|------------|-----------|
-| User/Security | ✅ Completo | 100% | 0% |
+| User/Security | ✅ Completo | 100% | 0% (edición de roles/password y `/me` → T8) |
 | Athlete | ✅ Completo | 100% | 0% (reportes → módulo Reportes) |
 | Training | ✅ Completo | 100% | 0% (alertas → acknowledge sin persistencia, ver OpenSpec) |
 

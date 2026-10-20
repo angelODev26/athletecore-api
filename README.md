@@ -28,6 +28,18 @@ cp .env.example .env
 
 **IMPORTANTE**: Edita `.env` con tus propias credenciales y **nunca** lo commits al repositorio.
 
+El **admin inicial** de un entorno nuevo lo siembra la migración `V6` y necesita
+`ADMIN_PASSWORD_HASH` (hash BCrypt, nunca la contraseña en claro). Sin él la app
+no arranca (fail-fast). Generación:
+
+```bash
+htpasswd -bnBC 12 "" 'mi-password' | tr -d ':\n'
+```
+
+En local no hace falta: `application-local.properties` trae un admin de
+desarrollo documentado (`admin` / `admin123`). Runbook completo en
+`docs/flyway.md` §«Migración V6».
+
 ### 2. Dependencias del Proyecto
 
 El proyecto usa Spring Boot DevTools para desarrollo local. Las dependencias principales son:
@@ -130,6 +142,9 @@ docker exec -it athletecore-postgres psql -U athletecore_user -d athletecore -c 
 | `JWT_SECRET` | Clave secreta para JWT | (requerido) |
 | `JWT_EXPIRATION_MS` | Expiración del token (ms) | `86400000` (24h) |
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos CORS | `http://localhost:3000` |
+| `ADMIN_USERNAME` | Username del admin inicial (seed `V6`) | `admin` |
+| `ADMIN_EMAIL` | Email del admin inicial (seed `V6`) | `admin@athletecore.local` |
+| `ADMIN_PASSWORD_HASH` | Hash BCrypt del admin inicial (`V6`) | (requerido fuera de local) |
 
 ## Despliegue en Producción
 
@@ -155,6 +170,15 @@ docker-compose --profile production down
 docker-compose --profile production pull
 docker-compose --profile production up -d
 ```
+
+### Orden de despliegue coordinado con el front
+
+El cierre del registro público (`POST /api/v1/users` pasa a `ROLE_ADMIN`) rompe
+la pantalla de registro del front en cuanto aterriza el back. El front ya
+despliega su fase B (`openspec/changes/alta-usuarios-admin` en
+`athletecore-web`) con el dialog de alta para ADMIN y el retiro de `/registro`.
+**Back y front deben ir en el mismo release.** Si el back sube antes, `/registro`
+queda roto a propósito hasta que suba el front.
 
 ## Solución de Problemas
 
@@ -283,7 +307,9 @@ flyway migrate
 ```bash
 # Configurar .env con variables locales
 cp .env.example .env
-# Edita .env con configuración local
+# Edita .env con configuración local. Para el seed del admin (V6) define
+# ADMIN_PASSWORD_HASH (hash BCrypt); o usa el perfil local, que trae un
+# admin de desarrollo (admin / admin123).
 
 # Ejecutar con Maven
 ./mvnw spring-boot:run

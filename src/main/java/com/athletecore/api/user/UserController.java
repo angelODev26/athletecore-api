@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.athletecore.api.domain.User;
 import com.athletecore.api.user.dto.CreateUserRequest;
 import com.athletecore.api.user.dto.UserResponse;
 
@@ -41,13 +40,16 @@ public class UserController {
     }
 
     /**
-     * Registra un nuevo usuario. Endpoint público.
+     * Crea un nuevo usuario con los roles indicados. Restringido a
+     * administradores: el registro público está cerrado y solo un ADMIN puede
+     * dar de alta usuarios (P1/P2 de gestión de usuarios).
      * POST /api/v1/users
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest createUserRequest) {
-        User createdUser = userService.createUser(createUserRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.fromUser(createdUser));
+        UserResponse createdUser = userService.createUser(createUserRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
 }

@@ -103,7 +103,10 @@ Errores: refresh inválido, expirado, de tipo incorrecto o de un usuario deshabi
 |--------|------|
 | `POST` | `/api/v1/auth/login` |
 | `POST` | `/api/v1/auth/refresh` |
-| `POST` | `/api/v1/users` (registro — siempre crea con `ROLE_USER`) |
+
+> El alta de usuarios (`POST /api/v1/users`) **ya no es pública**: requiere
+> `ROLE_ADMIN`. El registro abierto está cerrado y el primer ADMIN nace del seed
+> Flyway `V6` (ver `03` §3 y `01` §5).
 
 ### Restringidos por rol a nivel de URL (`hasAnyRole("ADMIN","COACH")`)
 
@@ -142,10 +145,11 @@ Athletes CRUD, checkups, reportes… cualquier rol válido (`ROLE_USER` incluido
 | `ROLE_COACH` | Migración V3 | Entrenamientos, asistencia y alertas |
 
 - Un usuario puede tener **varios roles** (claim `roles` es un array).
-- **Todo registro público recibe únicamente `ROLE_USER`** (`UserService.createUser`, hardcoded).
-  No existe endpoint para cambiar roles → los ADMIN/COACH se crean a mano en DB (ver `01` §5).
-- Si en el futuro se quieren "entrenadores se registran solos", hace falta cambio de backend
-  (decisión pendiente, ver `09`).
+- **Solo un ADMIN crea usuarios** (`POST /api/v1/users`, cerrado el registro
+  público) y elige sus roles: `ADMIN`, `COACH` o `USER` (ver `03` §3). El primer
+  ADMIN de un entorno nace del seed Flyway `V6` (ver `01` §5).
+- No existe endpoint para **editar** roles de un usuario ya creado: para cambiar
+  un rol hoy hay que hacerlo en DB (deuda T8, ver `09`).
 
 ### Modelo sugerido de roles en el front
 
@@ -202,8 +206,8 @@ NO a login.
   `localStorage` es aceptable dado el perfil de riesgo; el refresh token tiene vida
   más larga, así que si se quiere endurecer, guárdalo separado del access token o
   valora `sessionStorage` para el access. Decisión final del equipo front.)
-- **Contraseñas**: BCrypt(12). Política de password en registro: mínimo 6 caracteres
-  (débil — la robustez extra, si se quiere, se valida en front; ver `03`).
+- **Contraseñas**: BCrypt(12). Política de password en el alta de usuarios: mínimo 6
+  caracteres (débil — la robustez extra, si se quiere, se valida en front; ver `03`).
 - **No hay** rate limiting ni bloqueo por fuerza bruta (backlog POST-v1.0.0). El front
   puede implementar su propio "debounce"/deshabilitar botón tras N intentos, pero no debe
   esperar 429 del servidor.

@@ -74,8 +74,8 @@
 | T4 | Proyección de medallería calculada on-the-fly, sin histórico | No prometer "histórico de proyección"; posible latencia |
 | T5 | Chequeos y tiempos sin `PUT` (solo crear/borrar) | UI de "corregir" = borrar y recrear; confirmar con usuario |
 | T6 | `birthDate` ausente del DTO de creación de atleta | Alta en 2 pasos (POST + PUT) o pedir al back incluirlo |
-| T7 | `UserResponse` sin roles → tabla de usuarios sin columna de rol | La pantalla de admin de usuarios solo muestra datos básicos |
-| T8 | No hay `/me`, ni logout, ni edición/password de usuarios | Sesión 100% basada en decodificar el JWT + `user` del login |
+| T7 | ~~`UserResponse` sin roles → tabla de usuarios sin columna de rol~~ | **Resuelto** (change `gestion-usuarios-admin`): `UserResponse.roles` en login, refresh, listado y creación |
+| T8 | No hay `/me`, ni logout, ni edición/password de usuarios (tampoco `PUT /users/{id}` para roles/enabled) | Sesión 100% basada en decodificar el JWT + `user` del login; los roles se asignan al crear y se cambian en DB |
 | T9 | Reportes: lista filtrada en memoria | Cap de resultados en UI; refinar filtros antes de llamar |
 | T10 | Sin rate limiting ni brute-force en back | El front aplica sus propias mitigaciones de UX (bloqueo temporal del botón de login) |
 
@@ -91,8 +91,10 @@ Estas **no se van a cambiar** (son convenciones del proyecto, ver `core/principl
 2. **Soft delete universal con `@SQLRestriction`.** Ningún endpoint devuelve borrados;
    404 tras DELETE es el comportamiento correcto, no un bug.
 3. **Seguridad stateless.** Cada request lleva su JWT; no hay sesiones, cookies ni CSRF.
-4. **RBAC de 3 roles** con asignación manual fuera de la API (registro = siempre USER).
-   La gestión de roles por UI requiere feature nueva.
+4. **RBAC de 3 roles** con alta de usuarios **solo por ADMIN** (el registro público
+   está cerrado desde `gestion-usuarios-admin`). El ADMIN elige `ADMIN`/`COACH`/`USER`
+   al crear; el primer ADMIN nace de un seed Flyway. Editar roles de un usuario ya
+   creado sigue requiriendo DB (feature nueva).
 5. **IDs numéricos autoincrementales** expuestos en URL y JSON.
 6. **Formato de tiempos doble** (segundos + `mm:ss.fff`) — convención deliberada del
    módulo checkup; usar el string formateado del servidor en toda visualización.

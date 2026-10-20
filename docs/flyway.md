@@ -8,7 +8,12 @@ Este documento describe la configuración de Flyway para la gestión de migracio
 
 ```
 src/main/resources/db/migration/
-└── V1__initial_schema.sql    # Primera migración: roles, users, user_roles
+├── V1__initial_schema.sql              # roles, users, user_roles
+├── V2__athletes_schema.sql             # deportistas + seed de roles base y deportes
+├── V3__training_schema.sql             # entrenamientos + ROLE_COACH
+├── V4__checkup_schema.sql              # chequeos
+├── V5__reports_schema.sql              # reportes
+└── V6__seed_admin_usuario_inicial.sql  # admin inicial (placeholders de entorno)
 ```
 
 ## Migración V1: Schema Inicial
@@ -50,6 +55,60 @@ INSERT INTO roles (name, created_at, updated_at) VALUES
 
 **NUNCA** incluir contraseñas hardcodeadas en migraciones. Usar variables de entorno o seeders de Spring.
 
+---
+
+## Migración V6: seed del administrador inicial
+
+**Archivo**: `V6__seed_admin_usuario_inicial.sql`
+
+Con el registro público cerrado (`POST /api/v1/users` requiere `ROLE_ADMIN`), un
+entorno nuevo necesita un ADMIN para poder operar. La migración lo siembra a
+partir de **placeholders de Flyway** alimentados por variables de entorno:
+
+| Placeholder | Variable de entorno | Default |
+|---|---|---|
+| `spring.flyway.placeholders.admin_username` | `ADMIN_USERNAME` | `admin` |
+| `spring.flyway.placeholders.admin_email` | `ADMIN_EMAIL` | `admin@athletecore.local` |
+| `spring.flyway.placeholders.admin_password_hash` | `ADMIN_PASSWORD_HASH` | **sin default** (fail-fast) |
+
+### Generar el hash
+
+El password se guarda como hash **BCrypt**, nunca en claro:
+
+```bash
+htpasswd -bnBC 12 "" 'mi-password' | tr -d ':\n'
+# $2y$12$...
+```
+
+En producción, definir `ADMIN_PASSWORD_HASH` con ese valor. En local,
+`application-local.properties` (gitignored) trae un hash de desarrollo
+documentado (`admin` / `admin123`) para no depender de variables externas.
+
+### Comportamiento
+
+- **Fail-fast**: si falta `ADMIN_PASSWORD_HASH`, Spring no arranca (placeholder no
+  resuelto). Deliberado: evita desplegar sin ninguna vía de administración.
+- **Idempotente**: `ON CONFLICT (username) DO NOTHING`; si el usuario ya existe
+  (incluido uno con soft delete) no se duplica ni se sobrescribe su password,
+  `enabled` o roles.
+- **Vínculo de rol**: solo inserta `user_roles` con `ROLE_ADMIN` si falta.
+- **Rotación de contraseña**: Flyway no re-ejecuta `V6`; cambiar el hash en el
+  entorno no cambia la contraseña ya sembrada. La rotación es un `UPDATE` manual
+  documentado (o el futuro endpoint de password, deuda T8).
+- **Username soft-deleted**: si existe un `admin` con `deleted_at` no nulo, el
+  seed se salta el alta; elegir otro `ADMIN_USERNAME` o restaurar el usuario.
+
+### Verificación post-deploy
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"<la del hash>"}'
+# 200 con user.roles = ["ROLE_ADMIN"]
+```
+
+---
+
 ## Configuración
 
 ### application.properties (Todos los entornos)
@@ -76,6 +135,9 @@ spring.flyway.baseline-on-migrate=true     # Crear baseline solo la primera vez
 | `DB_USER` | Usuario DB | `postgres` |
 | `DB_PASSWORD` | Contraseña DB | `postgres` |
 | `JWT_SECRET` | Secret para JWT | **OBLIGATORIO en producción** |
+| `ADMIN_USERNAME` | Username del admin inicial (V6) | `admin` |
+| `ADMIN_EMAIL` | Email del admin inicial (V6) | `admin@athletecore.local` |
+| `ADMIN_PASSWORD_HASH` | Hash BCrypt del admin inicial (V6) | **OBLIGATORIO salvo perfil local** |
 
 ## Uso
 
@@ -140,6 +202,9 @@ mvn flyway:baseline -Dflyway.baselineVersion=1
 | `DB_URL` | URL de conexión PostgreSQL | `jdbc:postgresql://localhost:5432/athletecore` |
 | `DB_USER` | Usuario de PostgreSQL | `postgres` |
 | `DB_PASSWORD` | Contraseña de PostgreSQL | `postgres` |
+| `ADMIN_USERNAME` | Username del admin inicial (V6) | `admin` |
+| `ADMIN_EMAIL` | Email del admin inicial (V6) | `admin@athletecore.local` |
+| `ADMIN_PASSWORD_HASH` | Hash BCrypt del admin inicial (V6) | **obligatorio** (local tiene default de desarrollo) |
 
 ## Consideraciones importantes
 
@@ -163,12 +228,16 @@ spring.flyway.out-of-order=false         # Estricto orden de migraciones en prod
 
 ### Migraciones de Esquema vs Datos
 
-**Regla:** Flyway debe usarse SOLO para crear/actualizar esquema de tablas.
+**Regla:** las migraciones pueden incluir datos **de referencia o de arranque**
+(catálogos y bootstrap), siempre que sean idempotentes y no destructivas. Los
+datos de negocio volátiles no van aquí.
 
-- ✅ `V1__initial_schema.sql` - Solo CREATE TABLE, ALTER TABLE
-- ❌ **NO** INSERTs de datos aquí
-- ✅ Crear migraciones separadas `V2__seed_data.sql` si se requieren datos iniciales
-- ✅ O mejor: Usar `CommandLineRunner` de Spring para seeders
+- ✅ `V1__initial_schema.sql` — solo esquema.
+- ✅ `V2`/`V3` — esquema + seed de catálogos estables (`ROLE_*`, deportes).
+- ✅ `V6` — bootstrap del admin inicial desde placeholders de entorno, idempotente
+  (`ON CONFLICT ... DO NOTHING`).
+- ❌ Datos de negocio, fixtures de demo o cualquier seed que pise filas existentes.
+- ❌ Contraseñas en claro: siempre hash BCrypt vía `ADMIN_PASSWORD_HASH`.
 
 ### Seguridad
 
@@ -184,9 +253,11 @@ spring.security.jwt.secret=${JWT_SECRET}  # Sin fallback hardcoded!
 ```
 
 **NUNCA:**
-- ❌ Hardcodear passwords
+- ❌ Hardcodear passwords (en migraciones, seeds, código o docs)
 - ❌ Usar fallbacks inseguros (`your-secret-key-change-in-production`)
-- ❌ Incluir credenciales en migraciones o seeds
+- ❌ Incluir credenciales **en claro** en migraciones o seeds
+- ✅ Sembrar **hashes** BCrypt vía variables de entorno (`ADMIN_PASSWORD_HASH`), como
+  hace `V6`
 
 ### Verificación de Esquema
 
@@ -200,16 +271,19 @@ Si hay discrepancias, verificar:
 2. Entidades Java coinciden con tablas
 3. `ddl-auto=validate` en producción
 
-## Próximas migraciones
+## Migraciones aplicadas
 
-Según el roadmap del proyecto, las siguientes migraciones incluirán:
+El roadmap de esquema ya está completo hasta `V6`:
 
-- **V2__athletes_schema**: Entidades de deportistas
-- **V3__training_schema**: Entidades de entrenamientos
-- **V4__checkup_schema**: Entidades de chequeos mensuales
-- **V5__reports_schema**: Entidades de reportes
+- **V1** — roles, users, user_roles
+- **V2** — deportistas (+ catálogo de roles y deportes)
+- **V3** — entrenamientos (+ `ROLE_COACH`)
+- **V4** — chequeos mensuales
+- **V5** — reportes
+- **V6** — bootstrap del admin inicial
 
-Cada migración será creada por los agentes especializados correspondientes.
+Las próximas migraciones (`V7+`) se crean con el mismo patrón: archivo versionado,
+idempotente y con `created_at`/`updated_at`/`deleted_at` cuando aplique.
 
 ## Referencias
 
