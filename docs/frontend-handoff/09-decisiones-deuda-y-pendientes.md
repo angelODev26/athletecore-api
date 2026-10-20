@@ -78,6 +78,7 @@
 | T8 | No hay `/me`, ni logout, ni edición/password de usuarios (tampoco `PUT /users/{id}` para roles/enabled) | Sesión 100% basada en decodificar el JWT + `user` del login; los roles se asignan al crear y se cambian en DB |
 | T9 | Reportes: lista filtrada en memoria | Cap de resultados en UI; refinar filtros antes de llamar |
 | T10 | Sin rate limiting ni brute-force en back | El front aplica sus propias mitigaciones de UX (bloqueo temporal del botón de login) |
+| T11 | Alta con username/email de un usuario **soft-deleted** devuelve 500 (los `UNIQUE` son globales y los chequeos de duplicado filtran `deleted_at`) | Tratar el 500 de alta como "ya existe" (409 de facto) y no prometer el username/email como libre |
 
 ---
 

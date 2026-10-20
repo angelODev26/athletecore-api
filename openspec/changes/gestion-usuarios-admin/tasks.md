@@ -107,9 +107,11 @@
 - [x] 6.1 `./mvnw test` en verde (PostgreSQL vivo para el context test) y
       `./mvnw compile` limpio.
 - [x] 6.2 Ejecutar la matriz manual de §4.3 y anotar el resultado.
-- [ ] 6.3 `/review` con `quality-guardian` (alcance: el diff del change); corregir
-      hallazgos.
-- [ ] 6.4 Avisar al front: P1/P2/P3 entregados (verificados contra código), con
+- [x] 6.3 Review del diff: **sustituto** (agente `general`, solo lectura) por no
+      estar `quality-guardian` disponible en la sesión; hallazgos corregidos (ver
+      Desviaciones). **Pendiente re-ejecutar `/review` con `quality-guardian`**
+      antes del merge.
+- [x] 6.4 Avisar al front: P1/P2/P3 entregados (verificados contra código), con
       la forma final del request y el nombre exacto de los roles; el front retoma
       `alta-usuarios-admin`.
 - [ ] 6.5 Sync de la spec `gestion-usuarios` + archive del change + merge a
@@ -117,4 +119,22 @@
 
 ## Desviaciones
 
-(ninguna todavía)
+1. **Review sustituto.** `quality-guardian` no existe en la sesión del front; el
+   diff lo revisó un agente `general` en modo solo lectura. Sus hallazgos
+   BLOQUEANTE/MAYORES se corrigieron: seed que no promueve cuentas
+   preexistentes no confiables (S1), validación BCrypt del hash (S2), propagación
+   de `ADMIN_*` en `docker-compose` (M1), test de seguridad 401/403/201 (M2),
+   falsos positivos y casos límite de tests (M3/M4), aislamiento del context test
+   (D4) y ejemplo versionado del perfil local (M5). Queda como deuda T11 el 500
+   con username/email de un usuario soft-deleted (preexistente, documentado).
+2. **Seed más estricto que el diseño original.** La spec/design se actualizaron:
+   un username preexistente solo recibe `ROLE_ADMIN` si su password coincide con
+   el hash sembrado, está `enabled` y sin soft delete; si no, la migración aborta.
+   Se añadió validación de formato BCrypt y de email en uso.
+3. **Matcher de URL ampliado** a `/api/v1/users` + `/api/v1/users/**` (no solo
+   `POST`) para cubrir métodos futuros, como pedía el rationale de D1.
+4. **`application-local.properties.example`** nuevo (versionado) porque el
+   archivo real está gitignored y la documentación decía que "traía" el admin de
+   desarrollo.
+5. **`docker-compose` ahora exige `ADMIN_PASSWORD_HASH`** (`:?`): el despliegue
+   por compose falla con mensaje claro si falta, en línea con el fail-fast.

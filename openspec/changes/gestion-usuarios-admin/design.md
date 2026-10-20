@@ -49,12 +49,12 @@ Mockito en español, documentación en español.
 
 ### D1 — P1 por regla de URL **y** anotación de método
 
-`SecurityConfig` quita `POST /api/v1/users` de `permitAll` y lo declara
-`hasAnyRole("ADMIN")` en el matcher de URLs; además `UserController.createUser`
-lleva `@PreAuthorize("hasRole('ADMIN')")`. Las dos capas son redundantes a
-propósito: la regla de URL protege si mañana se añade otro método en el mismo
-path y la anotación documenta el permiso junto al endpoint (patrón ya usado en
-`getAllUsers`).
+`SecurityConfig` quita `POST /api/v1/users` de `permitAll` y declara el path
+completo `/api/v1/users` (y `/api/v1/users/**`) bajo `hasAnyRole("ADMIN")`;
+además `UserController.createUser` lleva `@PreAuthorize("hasRole('ADMIN')")`. Las
+dos capas son redundantes a propósito: la regla de URL protege si mañana se
+añade otro método en el mismo path y la anotación documenta el permiso junto al
+endpoint (patrón ya usado en `getAllUsers`).
 
 - Públicos quedan **solo** login y refresh (`docs/frontend-handoff/02` §1).
 - Anónimo → 401 (`RestAuthenticationEntryPoint`); autenticado sin ADMIN → 403
@@ -135,10 +135,15 @@ WHERE u.username = '${admin_username}' AND r.name = 'ROLE_ADMIN'
   en Flyway (`V2`/`V3` siembran roles y deportes) y RNF-04 exige Flyway; un
   initializer en Java duplicaría responsabilidades y no dejaría rastro en
   `flyway_schema_history`.
-- **Idempotencia y no intromisión**: `ON CONFLICT (username) DO NOTHING` cubre el
-  caso de un `admin` ya existente (incluido uno soft-deleted, porque el índice
-  único de `username` es global en `V1`). Nunca se sobrescribe password,
-  `enabled` ni roles existentes.
+- **Validación del hash**: la migración exige un BCrypt válido (60 chars,
+  `$2a/$2b/$2y`) y username/email no vacíos antes de tocar datos. Un
+  `ADMIN_PASSWORD_HASH` vacío (variable definida sin valor) o en claro aborta.
+- **Idempotencia y no intromisión**: si el username ya existe, la migración
+  **solo** añade `ROLE_ADMIN` cuando la cuenta demuestra ser la sembrada (misma
+  password que el hash configurado, `enabled = true` y sin soft delete). Si no,
+  aborta con un error accionable: nunca promueve una cuenta preexistente creada
+  por el antiguo registro público. Tampoco sobrescribe password, `enabled` ni
+  roles existentes. Un email ya en uso por otro usuario aborta (UNIQUE global).
 - **Tests**: `AthletecoreApiApplicationTests` recibe el placeholder por
   `@SpringBootTest(properties = "spring.flyway.placeholders.admin_password_hash=...")`
   para que el contexto arranque sin depender de una env externa.

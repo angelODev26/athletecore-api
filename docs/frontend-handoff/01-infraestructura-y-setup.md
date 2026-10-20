@@ -111,10 +111,12 @@ explícitamente — no es un bug, es la política de seguridad elegida.
 - Los **roles se seedean por migración**: `ROLE_USER` y `ROLE_ADMIN` (V2), `ROLE_COACH` (V3).
 - **El primer ADMIN nace del seed `V6`** (`V6__seed_admin_usuario_inicial.sql`): lee
   `ADMIN_USERNAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD_HASH` (hash BCrypt) del entorno.
-  En local, `application-local.properties` trae un admin de desarrollo
-  (`admin` / `admin123`) para no depender de variables externas. Sin el hash, la app
-  **no arranca** (fail-fast): el registro público está cerrado y un entorno sin admin
-  quedaría bloqueado. Runbook en `docs/flyway.md`.
+  En local, el ejemplo versionado
+  `src/main/resources/application-local.properties.example` trae un admin de
+  desarrollo (`admin` / `admin123`); cópialo o mézclalo en tu
+  `application-local.properties` (gitignored). Sin el hash, la app
+  **no arranca** (fail-fast): el registro público está cerrado y un entorno sin
+  admin quedaría bloqueado. Runbook en `docs/flyway.md`.
 - Para cambiar el rol de un usuario ya creado no hay endpoint: se hace en DB (deuda T8).
 
 ---

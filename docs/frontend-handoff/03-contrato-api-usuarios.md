@@ -164,6 +164,10 @@ devuelve token: el ADMIN crea la cuenta y el usuario inicia sesión aparte.
 | `409` | Username ya existe | `"User with username already exists"` |
 | `409` | Email ya existe | `"User with email already exists"` |
 
+> ⚠️ Si el username/email pertenece a un usuario **soft-deleted**, los chequeos de
+> duplicado no lo ven (filtran `deleted_at`) y el `UNIQUE` global produce hoy un
+> `500`. Deuda T11 en el archivo `09`: el front debe tratar ese 500 como "ya existe".
+
 ---
 
 ## 4. `GET /api/v1/users` 🔒 `ROLE_ADMIN`

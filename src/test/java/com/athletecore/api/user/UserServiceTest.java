@@ -87,7 +87,7 @@ class UserServiceTest {
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
         when(roleRepository.findByName("ROLE_USER")).thenReturn(Optional.of(userRole));
-        when(userRepository.save(any(User.class))).thenReturn(newUser);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
         UserResponse result = userService.createUser(createUserRequest);
@@ -97,7 +97,59 @@ class UserServiceTest {
         assertEquals("testuser", result.username());
         assertEquals("test@example.com", result.email());
         assertEquals(List.of("ROLE_USER"), result.roles());
-        verify(userRepository, times(1)).save(any(User.class));
+        verify(roleRepository).findByName("ROLE_USER");
+
+        // El rol debe estar en la entidad realmente guardada, no solo en el mock
+        // de retorno (evita un falso positivo del default ROLE_USER).
+        ArgumentCaptor<User> savedUser = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(savedUser.capture());
+        assertEquals(1, savedUser.getValue().getRoles().size());
+        assertEquals("ROLE_USER", savedUser.getValue().getRoles().iterator().next().getName());
+    }
+
+    @Test
+    @DisplayName("Debe aplicar ROLE_USER cuando roles viene vacío")
+    void createUser_EmptyRolesDefaultsToUser() {
+        // Arrange
+        createUserRequest.setRoles(List.of());
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
+        when(roleRepository.findByName("ROLE_USER")).thenReturn(Optional.of(userRole));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        UserResponse result = userService.createUser(createUserRequest);
+
+        // Assert
+        assertEquals(List.of("ROLE_USER"), result.roles());
+        verify(roleRepository).findByName("ROLE_USER");
+    }
+
+    @Test
+    @DisplayName("Debe rechazar un rol null sin guardar el usuario")
+    void createUser_NullRoleRejected() {
+        // Arrange
+        createUserRequest.setRoles(Collections.singletonList(null));
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ValidationException.class, () -> userService.createUser(createUserRequest));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("Debe rechazar un rol en blanco sin guardar el usuario")
+    void createUser_BlankRoleRejected() {
+        // Arrange
+        createUserRequest.setRoles(List.of("   "));
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ValidationException.class, () -> userService.createUser(createUserRequest));
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
@@ -223,5 +275,29 @@ class UserServiceTest {
 
         // Assert
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Debe mapear los roles en el listado de usuarios")
+    void getAllUsers_MapsRoles() {
+        // Arrange
+        User userWithRoles = User.builder()
+                .id(2L)
+                .username("coach")
+                .email("coach@example.com")
+                .password("encoded")
+                .firstName("Coach")
+                .lastName("Test")
+                .enabled(true)
+                .roles(new java.util.LinkedHashSet<>(List.of(coachRole, userRole)))
+                .build();
+        when(userRepository.findAll()).thenReturn(List.of(userWithRoles));
+
+        // Act
+        var result = userService.getAllUsers();
+
+        // Assert
+        assertEquals(1, result.size());
+        assertEquals(List.of("ROLE_COACH", "ROLE_USER"), result.get(0).roles());
     }
 }

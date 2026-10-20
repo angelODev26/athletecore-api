@@ -97,15 +97,19 @@ transacción que carga al usuario para no provocar `LazyInitializationException`
 El sistema SHALL sembrar un usuario con `ROLE_ADMIN` mediante una migración
 Flyway dedicada, con `username`, `email` y hash BCrypt tomados de variables de
 entorno (`ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`). La aplicación
-MUST NOT arrancar si falta el hash. La migración SHALL ser idempotente: si ya
-existe un usuario con ese username (incluido uno con soft delete), MUST NOT
-duplicarlo, sobrescribir su password, su estado `enabled` ni sus roles; solo SHALL
-crear el vínculo con `ROLE_ADMIN` si falta. La contraseña MUST almacenarse como
-hash BCrypt, nunca en texto plano.
+MUST NOT arrancar si falta el hash o si no es un hash BCrypt válido. La migración
+SHALL ser idempotente y no intrusiva: si ya existe un usuario con ese username,
+MUST NOT duplicarlo ni sobrescribir su password, su estado `enabled` ni sus
+roles; SHALL añadir el vínculo con `ROLE_ADMIN` solo si la cuenta existente
+demuestra ser la sembrada (misma password que el hash configurado, `enabled =
+true` y sin soft delete). En cualquier otro caso MUST abortar con un error
+accionable, sin promover la cuenta. Si el email ya está en uso por otro usuario,
+MUST abortar. La contraseña MUST almacenarse como hash BCrypt, nunca en texto
+plano.
 
 #### Scenario: Entorno nuevo arranca con admin usable
 - **WHEN** se despliega sobre una base sin usuarios con las tres variables de
-  entorno definidas
+  entorno definidas y un hash BCrypt válido
 - **THEN** existe un usuario con `ROLE_ADMIN`, `enabled = true`, y puede iniciar
   sesión y operar `GET /users` y `POST /users`
 
@@ -114,11 +118,22 @@ hash BCrypt, nunca en texto plano.
 - **THEN** el arranque falla por placeholder de Flyway no resuelto y no se aplica
   la migración
 
-#### Scenario: Usuario ya existente
-- **WHEN** la migración se aplica sobre una base donde ya existe un usuario con el
-  username configurado (por ejemplo `admin.demo`)
-- **THEN** no se duplica ni se modifica ese usuario, y la migración no falla
+#### Scenario: Hash inválido o vacío
+- **WHEN** `ADMIN_PASSWORD_HASH` está definido pero vacío o no es un BCrypt válido
+- **THEN** la migración aborta con un error accionable y no crea ningún usuario
 
-#### Scenario: Vínculo de rol ausente
-- **WHEN** el usuario configurado existe pero no tiene `ROLE_ADMIN`
+#### Scenario: Usuario preexistente no confiable
+- **WHEN** la migración se aplica sobre una base donde ya existe un usuario con el
+  username configurado pero distinta password, deshabilitado o con soft delete
+- **THEN** la migración aborta, no concede `ROLE_ADMIN` y no modifica la cuenta
+
+#### Scenario: Cuenta sembrada sin el vínculo de rol
+- **WHEN** el usuario configurado existe con la misma password del seed, está
+  habilitado, sin soft delete y no tiene `ROLE_ADMIN`
 - **THEN** la migración añade únicamente el vínculo `user_roles` con `ROLE_ADMIN`
+  sin tocar el resto de roles
+
+#### Scenario: Email del seed ya en uso
+- **WHEN** el username configurado no existe pero `ADMIN_EMAIL` pertenece a otro
+  usuario
+- **THEN** la migración aborta con un mensaje que pide configurar otro email

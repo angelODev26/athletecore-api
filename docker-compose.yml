@@ -42,6 +42,9 @@ services:
       - -password=${DB_PASSWORD:-athletecore_pass}
       - -url=jdbc:postgresql://postgres:5432/${DB_NAME:-athletecore}
       - -locations=filesystem:/flyway-local
+      - -placeholders.admin_username=${ADMIN_USERNAME:-admin}
+      - -placeholders.admin_email=${ADMIN_EMAIL:-admin@athletecore.local}
+      - -placeholders.admin_password_hash=${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH es obligatorio para el seed V6}
       - migrate
     environment:
       - FLYWAY_SCHEMAS=public
@@ -76,6 +79,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars-change-in-production}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@athletecore.local}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH es obligatorio para el seed V6}
     ports:
       - "8080:8080"
     volumes:
@@ -113,6 +119,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@athletecore.local}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH es obligatorio para el seed V6}
     ports:
       - "8080:8080"
     depends_on:

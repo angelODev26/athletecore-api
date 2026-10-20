@@ -80,23 +80,32 @@ htpasswd -bnBC 12 "" 'mi-password' | tr -d ':\n'
 # $2y$12$...
 ```
 
-En producción, definir `ADMIN_PASSWORD_HASH` con ese valor. En local,
-`application-local.properties` (gitignored) trae un hash de desarrollo
-documentado (`admin` / `admin123`) para no depender de variables externas.
+En producción, definir `ADMIN_PASSWORD_HASH` con ese valor. En local, el ejemplo
+versionado `src/main/resources/application-local.properties.example` trae el hash
+de desarrollo documentado (`admin` / `admin123`); cópialo o mézclalo en tu
+`application-local.properties` (gitignored) para no depender de variables
+externas.
 
 ### Comportamiento
 
 - **Fail-fast**: si falta `ADMIN_PASSWORD_HASH`, Spring no arranca (placeholder no
-  resuelto). Deliberado: evita desplegar sin ninguna vía de administración.
-- **Idempotente**: `ON CONFLICT (username) DO NOTHING`; si el usuario ya existe
-  (incluido uno con soft delete) no se duplica ni se sobrescribe su password,
-  `enabled` o roles.
-- **Vínculo de rol**: solo inserta `user_roles` con `ROLE_ADMIN` si falta.
+  resuelto). Si está definido pero vacío o no es un BCrypt válido (60 chars,
+  `$2a/$2b/$2y`), la migración aborta con un error accionable. Deliberado: evita
+  desplegar sin ninguna vía de administración o con una credencial inválida.
+- **No intrusiva**: si el username ya existe, solo se añade `ROLE_ADMIN` cuando la
+  cuenta coincide con el hash configurado, está `enabled` y sin soft delete. Si
+  no, la migración aborta: **nunca promueve** una cuenta preexistente (por
+  ejemplo, un `admin` registrado por el antiguo registro público) ni sobrescribe
+  su password, estado o roles.
+- **Email en uso**: si `ADMIN_EMAIL` pertenece a otro usuario, aborta con un
+  mensaje que pide configurar otro email.
+- **Vínculo de rol**: si la cuenta sembrada ya existe pero le falta `ROLE_ADMIN`,
+  solo inserta ese vínculo.
 - **Rotación de contraseña**: Flyway no re-ejecuta `V6`; cambiar el hash en el
   entorno no cambia la contraseña ya sembrada. La rotación es un `UPDATE` manual
   documentado (o el futuro endpoint de password, deuda T8).
-- **Username soft-deleted**: si existe un `admin` con `deleted_at` no nulo, el
-  seed se salta el alta; elegir otro `ADMIN_USERNAME` o restaurar el usuario.
+- **Username soft-deleted**: la migración aborta con un mensaje accionable;
+  restaurar la cuenta o elegir otro `ADMIN_USERNAME`.
 
 ### Verificación post-deploy
 

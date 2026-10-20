@@ -36,8 +36,10 @@ no arranca (fail-fast). Generación:
 htpasswd -bnBC 12 "" 'mi-password' | tr -d ':\n'
 ```
 
-En local no hace falta: `application-local.properties` trae un admin de
-desarrollo documentado (`admin` / `admin123`). Runbook completo en
+En local no hace falta: el ejemplo versionado
+`src/main/resources/application-local.properties.example` trae el hash de
+desarrollo documentado (`admin` / `admin123`); cópialo o mézclalo en tu
+`application-local.properties` (gitignored). Runbook completo en
 `docs/flyway.md` §«Migración V6».
 
 ### 2. Dependencias del Proyecto

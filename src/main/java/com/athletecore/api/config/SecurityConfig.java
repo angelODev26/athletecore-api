@@ -45,8 +45,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     // Endpoints públicos: solo login y renovación de tokens
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
-                    // Alta de usuarios: solo ADMIN (el registro público está cerrado)
-                    .requestMatchers(HttpMethod.POST, "/api/v1/users").hasAnyRole("ADMIN")
+                    // Alta y gestión de usuarios: solo ADMIN. El matcher cubre
+                    // el path completo (no solo POST) para no depender de que
+                    // cada método futuro recuerde su @PreAuthorize.
+                    .requestMatchers("/api/v1/users", "/api/v1/users/**").hasAnyRole("ADMIN")
                     // Módulo de entrenamientos: solo staff (ADMIN/COACH)
                     .requestMatchers(
                             "/api/v1/training-plans/**",
