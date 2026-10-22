@@ -115,8 +115,9 @@
 - [x] 6.4 Avisar al front: P1/P2/P3 entregados (verificados contra código), con
       la forma final del request y el nombre exacto de los roles; el front retoma
       `alta-usuarios-admin`.
-- [ ] 6.5 Sync de la spec `gestion-usuarios` + archive del change + merge a
-      `develop` + push.
+- [x] 6.5a Merge a `develop` + push (merge `f4983d7`).
+- [ ] 6.5b Sync de la spec `gestion-usuarios` a `openspec/specs/` + archive del
+      change.
 
 ## Desviaciones
 
