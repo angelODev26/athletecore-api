@@ -1,0 +1,29 @@
+# ============================================================================
+# ATHLETECORE API - EJEMPLO DE PERFIL LOCAL
+# ============================================================================
+#
+# Copia este archivo a src/main/resources/application-local.properties
+# (gitignored) o mezcla estas claves en tu archivo local existente.
+#
+# El perfil local se activa con:
+#   SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
+#
+# Las credenciales de infraestructura (DB_PASSWORD, JWT_SECRET) salen de .env
+# (copia .env.example). Este ejemplo aporta el admin de desarrollo y CORS.
+# ============================================================================
+
+# ============================================================================
+# CORS (el application.properties base lo deja vacío)
+# ============================================================================
+# Sin esto, el front en local no puede llamar a la API.
+spring.web.cors.allowed-origins=${CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+# ============================================================================
+# SEED DEL ADMIN INICIAL (V6)
+# ============================================================================
+# Hash BCrypt de la contraseña de desarrollo 'admin123':
+#   htpasswd -bnBC 12 "" 'admin123' | tr -d ':\n'
+# Solo para local. En otros entornos define ADMIN_PASSWORD_HASH (nunca en claro).
+spring.flyway.placeholders.admin_username=${ADMIN_USERNAME:admin}
+spring.flyway.placeholders.admin_email=${ADMIN_EMAIL:admin@athletecore.local}
+spring.flyway.placeholders.admin_password_hash=${ADMIN_PASSWORD_HASH:$2y$12$f/H.gisCLENcAAHLhJ/UMeErMGi6WQbiRmggPHT1xTtAwXEWBgHrK}

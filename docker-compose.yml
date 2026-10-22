@@ -13,7 +13,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-athletecore_pass}
       POSTGRES_DB: ${DB_NAME:-athletecore}
     ports:
-      - "5432:5432"
+      # Solo accesible desde el host: evita publicar la BD a la red.
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -27,6 +28,9 @@ services:
     profiles:
       - default
       - full
+      - migrate
+      - development
+      - production
 
   # ========================================
   # FLYWAY (MIGRACIONES)
@@ -38,12 +42,16 @@ services:
       postgres:
         condition: service_healthy
     command:
-      - -userid=${DB_USER:-athletecore_user}
-      - -password=${DB_PASSWORD:-athletecore_pass}
-      - -url=jdbc:postgresql://postgres:5432/${DB_NAME:-athletecore}
       - -locations=filesystem:/flyway-local
+      - -placeholders.admin_username=${ADMIN_USERNAME:-admin}
+      - -placeholders.admin_email=${ADMIN_EMAIL:-admin@athletecore.local}
+      - -placeholders.admin_password_hash=${ADMIN_PASSWORD_HASH:-}
       - migrate
     environment:
+      # Credenciales por entorno: no viajan en la línea de comandos (historial/ps).
+      - FLYWAY_URL=jdbc:postgresql://postgres:5432/${DB_NAME:-athletecore}
+      - FLYWAY_USER=${DB_USER:-athletecore_user}
+      - FLYWAY_PASSWORD=${DB_PASSWORD:-athletecore_pass}
       - FLYWAY_SCHEMAS=public
       - FLYWAY_VALIDATE_ON_MIGRATE=true
       - FLYWAY_CLEAN_DISABLED=true
@@ -53,7 +61,11 @@ services:
     networks:
       - athletecore-network
     profiles:
+      # La app depende de este servicio en development/production: debe estar
+      # habilitado en esos perfiles o Compose rechaza el proyecto.
       - migrate
+      - development
+      - production
 
   # ========================================
   # APLICACIÓN SPRING BOOT (DEVELOPMENT)
@@ -73,9 +85,12 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-athletecore_user}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-athletecore_pass}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
-      JWT_SECRET: ${JWT_SECRET:-your-secret-key-min-32-chars-change-in-production}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@athletecore.local}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
     ports:
       - "8080:8080"
     volumes:
@@ -111,8 +126,11 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-athletecore_pass}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@athletecore.local}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
     ports:
       - "8080:8080"
     depends_on:

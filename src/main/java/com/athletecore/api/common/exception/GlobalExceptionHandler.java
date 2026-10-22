@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -114,6 +115,22 @@ public class GlobalExceptionHandler {
                 .message("Ocurrió un error interno en el servidor")
                 .build();
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // Violaciones de constraints no detectadas antes de persistir. El caso
+    // típico son los UNIQUE globales (username/email) cuando el valor choca con
+    // una fila soft-deleted que los repositorios no ven, o una carrera entre dos
+    // altas concurrentes. Se responde 409, no 500: para el cliente es "ya existe".
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+            DataIntegrityViolationException ex) {
+        logger.warn("Conflicto de integridad de datos: {}", ex.getMostSpecificCause().getMessage());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                .message("El recurso ya existe o entra en conflicto con una restricción de integridad")
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 
     // Manejo genérico de Exceptions no capturadas

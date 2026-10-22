@@ -99,10 +99,13 @@ El frontend **no debe asumirlas** ni diseñar pantallas que las requieran:
    y el recurso deja de aparecer en los listados y en los `GET` por id (404). El front no
    puede "recuperar" nada ni necesita papelera.
 
-4. **Seguridad stateless con un solo endpoint público.** Únicamente `POST /api/v1/users`
-   (registro) y el login son accesibles sin token; todo lo demás requiere JWT. Hay endpoints
-   restringidos a `ROLE_ADMIN` (tabla nacional de referencia, gestión de usuarios). El front
-   necesita manejo de roles en UI. Detalles en archivo `02`.
+4. **Seguridad stateless con login y refresh públicos.** Únicamente
+   `POST /api/v1/auth/login` y `POST /api/v1/auth/refresh` son accesibles sin token;
+   todo lo demás requiere JWT. La **creación de usuarios es solo ADMIN**
+   (`POST /api/v1/users`; el registro público está cerrado) y el primer ADMIN nace
+   de un seed Flyway. Hay endpoints restringidos a `ROLE_ADMIN` (tabla nacional de
+   referencia, gestión de usuarios). El front necesita manejo de roles en UI.
+   Detalles en archivo `02`.
 
 5. **Lógica derivada, no persistida.** Dos casos que afectan directamente a la UX:
    - Las **alertas de ausencias** se calculan on-the-fly desde la asistencia; "acknowledge"

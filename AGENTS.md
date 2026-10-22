@@ -16,13 +16,13 @@ Spring Boot 3.5.6 REST API (Java 21, Maven, PostgreSQL 15, Flyway, JWT, Lombok) 
 - All entities extend `BaseEntity` — soft delete via `@SQLDelete`/`@SQLRestriction`, audit timestamps; repositories filter `deleted_at IS NULL`. Never delete rows physically.
 - Responses use DTOs (records in `<module>/dto/`); never return JPA entities. Services are single-purpose (e.g. `AthleteRegistrationService`, `AthleteSportService`) — no god services.
 - Exceptions: throw from `common/exception`; `GlobalExceptionHandler` centralizes error responses.
-- Security: stateless JWT; only `POST /api/v1/users` is public (`SecurityConfig.java:25`); admin endpoints use `@PreAuthorize("hasRole('ADMIN')")`.
+- Security: stateless JWT; only `POST /api/v1/auth/login` and `POST /api/v1/auth/refresh` are public; user creation (`POST /api/v1/users`) and admin endpoints require ADMIN (`SecurityConfig` + `@PreAuthorize`). The public registration is closed: users are created by an ADMIN with explicit roles; the first ADMIN comes from the Flyway seed `V6`.
 - Read `core/principles.md` before adding a module — it codifies these conventions.
 
 ## Database / Flyway
 
 - Migrations: `src/main/resources/db/migration/V{n}__name.sql` — versioned, reversible, with `created_at`/`updated_at`/`deleted_at` and indexes (see `docs/flyway.md`).
-- `spring.jpa.hibernate.ddl-auto=validate` always; schema changes require a new migration, never `create`/`update`. Flyway runs automatically at app startup.
+- The initial ADMIN is seeded by `V6__seed_admin_usuario_inicial.sql` from `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH` (BCrypt); the hash is required (fail-fast) and `application-local.properties` carries a documented dev default. `spring.jpa.hibernate.ddl-auto=validate` always; schema changes require a new migration, never `create`/`update`. Flyway runs automatically at app startup.
 
 ## Workflow
 

@@ -12,7 +12,7 @@
 |---|--------|------|------|-------------|
 | 1 | `POST` | `/api/v1/auth/login` | 🌐 Público | Login → par de tokens JWT (access + refresh) |
 | 2 | `POST` | `/api/v1/auth/refresh` | 🌐 Público | Renueva la sesión (rotación de tokens) |
-| 3 | `POST` | `/api/v1/users` | 🌐 Público | Registro de usuario (siempre `ROLE_USER`) |
+| 3 | `POST` | `/api/v1/users` | 🔒 `ROLE_ADMIN` | Alta de usuario con roles (el registro público está cerrado) |
 | 4 | `GET` | `/api/v1/users` | 🔒 `ROLE_ADMIN` | Lista completa de usuarios (⚠️ sin paginar) |
 
 **No existen** (no los diseñes en el front): `GET /users/{id}`, `PUT`, `DELETE`,
@@ -55,7 +55,8 @@ para obtener tokens; la renovación posterior se hace con `/auth/refresh` (§2.1
     "firstName": "John",
     "lastName": "Doe",
     "enabled": true,
-    "active": true
+    "active": true,
+    "roles": ["ROLE_ADMIN"]
   }
 }
 ```
@@ -113,10 +114,11 @@ tokens **nuevos** y los roles **actuales** del usuario.
 
 ---
 
-## 3. `POST /api/v1/users` 🌐 — Registro
+## 3. `POST /api/v1/users` 🔒 `ROLE_ADMIN` — Alta de usuario con roles
 
-Crea un usuario nuevo. **Público por diseño** (registro abierto). El usuario creado
-recibe **siempre y solo `ROLE_USER`** — esto está hardcodeado en `UserService.createUser`.
+Crea un usuario nuevo. **Requiere `ROLE_ADMIN`**: el registro público está
+cerrado, no existe auto-registro. El ADMIN elige los roles del usuario; si omite
+`roles`, el usuario nace con `ROLE_USER`.
 
 ### Request body
 
@@ -127,7 +129,8 @@ recibe **siempre y solo `ROLE_USER`** — esto está hardcodeado en `UserService
   "firstName": "John",
   "lastName": "Doe",
   "password": "secret123",
-  "confirmPassword": "secret123"
+  "confirmPassword": "secret123",
+  "roles": ["COACH"]
 }
 ```
 
@@ -137,16 +140,17 @@ recibe **siempre y solo `ROLE_USER`** — esto está hardcodeado en `UserService
 | `email` | string | obligatorio, formato email — `"Email should be valid"` |
 | `firstName` | string | obligatorio, máx 100 chars |
 | `lastName` | string | obligatorio, máx 100 chars |
-| `password` | string | obligatorio, **mín 6 chars** — `"Password must be at least 6 characters"` |
+| `password` | string | obligatorio, **mín 8 chars** — `"Password must be at least 8 characters"` |
 | `confirmPassword` | string | obligatorio; debe igualar `password` (validado en servicio, no en DTO) |
+| `roles` | string[] | **opcional**. Acepta `ADMIN`, `COACH`, `USER` y sus formas `ROLE_ADMIN`, `ROLE_COACH`, `ROLE_USER` (case-insensitive); se normalizan a `ROLE_*`, se deduplican y se devuelven ordenados. Fuera del catálogo → `400` `"Rol inválido: <valor>"`. Ausente o vacío → `ROLE_USER` |
 
 > Nota: los mensajes de validación de este DTO están en **inglés** (mejorable; el front
 > debería mapear por campo y no mostrar el texto crudo — estrategia en archivo `08`).
 
 ### Response `201 Created`
 
-Devuelve `UserResponse` (§4) del usuario creado. **No devuelve token**: tras registrarse,
-el flujo esperado es que el front haga login (o mueva al usuario a la pantalla de login).
+Devuelve `UserResponse` (§4/§5) del usuario creado, **incluyendo `roles`**. No
+devuelve token: el ADMIN crea la cuenta y el usuario inicia sesión aparte.
 
 ### Errores
 
@@ -154,8 +158,17 @@ el flujo esperado es que el front haga login (o mueva al usuario a la pantalla d
 |--------|--------|-----------|
 | `400` | Validación de campos fallida | Mensaje(es) por campo |
 | `400` | `password` ≠ `confirmPassword` | `"Las contraseñas no coinciden"` |
+| `400` | Rol fuera del catálogo | `"Rol inválido: <valor>"` |
+| `401` | Sin token / token expirado | `"Autenticación requerida"` |
+| `403` | Autenticado sin `ROLE_ADMIN` | `"Acceso denegado"` |
 | `409` | Username ya existe | `"User with username already exists"` |
 | `409` | Email ya existe | `"User with email already exists"` |
+| `409` | Username/email de un usuario **soft-deleted** o carrera de altas | `"El recurso ya existe o entra en conflicto con una restricción de integridad"` |
+
+> Si el username/email pertenece a un usuario **soft-deleted** (los chequeos de
+> duplicado filtran `deleted_at`) o dos altas compiten por el mismo valor, el
+> `UNIQUE` global se traduce a **409**, no a 500 (T11 resuelta). El front puede
+> tratarlo como "ya existe" sin distinguir el caso.
 
 ---
 
@@ -166,15 +179,14 @@ Lista **todos** los usuarios activos. Uso previsto: pantalla de administración 
 ```json
 [
   { "id": 1, "username": "jdoe", "email": "jdoe@mail.com", "firstName": "John",
-    "lastName": "Doe", "enabled": true, "active": true }
+    "lastName": "Doe", "enabled": true, "active": true, "roles": ["ROLE_USER"] }
 ]
 ```
 
 - ⚠️ **Sin paginación** — lista completa en memoria. Bloqueante conocido (ver `08`/TASKS):
   el front debe renderizar con virtualización/paginación client-side hasta que el back pagine.
-- ⚠️ **La respuesta NO incluye los roles del usuario** — `UserResponse` no tiene campo
-  `roles`. Una tabla de admin "con columna de rol" no es posible hoy sin cambio de backend
-  (candidato a decisión pendiente, ver `09`).
+- ✅ Cada elemento incluye `roles` (nombres `ROLE_*`, orden alfabético), así que la tabla
+  de administración puede mostrar la columna de rol.
 
 ### Errores
 
@@ -195,7 +207,8 @@ Lista **todos** los usuarios activos. Uso previsto: pantalla de administración 
   "firstName": "John",
   "lastName": "Doe",
   "enabled": true,
-  "active": true
+  "active": true,
+  "roles": ["ROLE_USER"]
 }
 ```
 
@@ -207,6 +220,7 @@ Lista **todos** los usuarios activos. Uso previsto: pantalla de administración 
 | `firstName` / `lastName` | string | |
 | `enabled` | boolean | Cuenta habilitada (flag de la entidad) |
 | `active` | boolean | `!deleted` — derivado del soft delete; siempre `true` en la práctica (los borrados se filtran) |
+| `roles` | string[] | Nombres `ROLE_*` (los mismos del claim `roles` del JWT), orden alfabético. Puede ser vacío en datos antiguos sin rol |
 
 ---
 
@@ -214,7 +228,8 @@ Lista **todos** los usuarios activos. Uso previsto: pantalla de administración 
 
 ```
 [Login] ──POST /auth/login──► guarda token + refreshToken + user → app
-[Registro] ──POST /users──► OK → redirige a Login (no hay auto-login)
+[Admin] ──POST /users (roles)──► OK → el usuario aparece en la lista de /usuarios
+[Admin inicial] ──seed Flyway V6──► login con las credenciales del entorno
 [Sesión expirada] 401 → intenta POST /auth/refresh → OK: reintenta · 401: borra tokens → Login
 [Rol insuficiente] 403 → pantalla "Acceso denegado"
 ```
