@@ -140,7 +140,7 @@ cerrado, no existe auto-registro. El ADMIN elige los roles del usuario; si omite
 | `email` | string | obligatorio, formato email — `"Email should be valid"` |
 | `firstName` | string | obligatorio, máx 100 chars |
 | `lastName` | string | obligatorio, máx 100 chars |
-| `password` | string | obligatorio, **mín 6 chars** — `"Password must be at least 6 characters"` |
+| `password` | string | obligatorio, **mín 8 chars** — `"Password must be at least 8 characters"` |
 | `confirmPassword` | string | obligatorio; debe igualar `password` (validado en servicio, no en DTO) |
 | `roles` | string[] | **opcional**. Acepta `ADMIN`, `COACH`, `USER` y sus formas `ROLE_ADMIN`, `ROLE_COACH`, `ROLE_USER` (case-insensitive); se normalizan a `ROLE_*`, se deduplican y se devuelven ordenados. Fuera del catálogo → `400` `"Rol inválido: <valor>"`. Ausente o vacío → `ROLE_USER` |
 
@@ -163,10 +163,12 @@ devuelve token: el ADMIN crea la cuenta y el usuario inicia sesión aparte.
 | `403` | Autenticado sin `ROLE_ADMIN` | `"Acceso denegado"` |
 | `409` | Username ya existe | `"User with username already exists"` |
 | `409` | Email ya existe | `"User with email already exists"` |
+| `409` | Username/email de un usuario **soft-deleted** o carrera de altas | `"El recurso ya existe o entra en conflicto con una restricción de integridad"` |
 
-> ⚠️ Si el username/email pertenece a un usuario **soft-deleted**, los chequeos de
-> duplicado no lo ven (filtran `deleted_at`) y el `UNIQUE` global produce hoy un
-> `500`. Deuda T11 en el archivo `09`: el front debe tratar ese 500 como "ya existe".
+> Si el username/email pertenece a un usuario **soft-deleted** (los chequeos de
+> duplicado filtran `deleted_at`) o dos altas compiten por el mismo valor, el
+> `UNIQUE` global se traduce a **409**, no a 500 (T11 resuelta). El front puede
+> tratarlo como "ya existe" sin distinguir el caso.
 
 ---
 

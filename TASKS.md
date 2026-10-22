@@ -148,9 +148,9 @@ refresh 7 días (`spring.security.jwt.refresh-expiration`). Notas para el front:
 - Contrato completo en `docs/frontend-handoff/03-contrato-api-usuarios.md` §3–5.
 - **Sigue faltando** (T8): `PUT /users/{id}` (roles, `enabled`, password),
   `DELETE`, `/me`, logout. Cambiar roles hoy = DB.
-- **Deuda T11** (`docs/frontend-handoff/09`): el alta con username/email de un
-  usuario **soft-deleted** devuelve 500 en vez de 409 (los `UNIQUE` son globales
-  y los chequeos filtran `deleted_at`). Preexistente.
+- **T11 resuelta:** el alta con username/email de un usuario **soft-deleted** (o
+  una carrera entre altas) ya devuelve **409**, no 500: `GlobalExceptionHandler`
+  traduce `DataIntegrityViolationException`. Ver `docs/frontend-handoff/09`.
 - **Deuda de test:** `V6` no tiene test automatizado (sus 4 ramas de seguridad se
   verificaron a mano sobre bases limpias). Cubrirlo cuando haya Testcontainers.
 

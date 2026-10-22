@@ -129,12 +129,38 @@ class UserControllerSecurityTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("crear usuario con password de 7 caracteres devuelve 400 y no toca el servicio")
+    void createUser_conPasswordCorta_devuelveBadRequest() throws Exception {
+        String body = """
+                {
+                  "username": "nuevo.coach",
+                  "email": "nuevo.coach@example.com",
+                  "firstName": "Nuevo",
+                  "lastName": "Coach",
+                  "password": "corta12",
+                  "confirmPassword": "corta12",
+                  "roles": ["COACH"]
+                }
+                """;
+
+        mockMvc.perform(post(BASE_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details").value("Password must be at least 8 characters"));
+
+        verifyNoInteractions(userService);
+    }
+
+    @Test
     @WithMockUser(roles = "USER")
     @DisplayName("GET /users/{id} con USER devuelve 403 por la regla de URL (sin handler)")
     void getUsersSubpath_conRolUser_devuelveForbiddenPorReglaDeUrl() throws Exception {
         // No hay handler para /users/{id}: solo la regla de URL de
-        // SecurityConfig puede producir un 403 (sin ella, el dispatch daría
-        // 404/405). Es el test discriminante de la defensa por path.
+        // SecurityConfig puede producir un 403 (sin ella, el dispatch acaba en
+        // 500 por NoHandlerFoundException). Es el test discriminante de la
+        // defensa por path.
         mockMvc.perform(get(BASE_URL + "/1"))
                 .andExpect(status().isForbidden());
     }

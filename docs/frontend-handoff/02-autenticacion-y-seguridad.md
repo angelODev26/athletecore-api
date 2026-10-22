@@ -117,14 +117,17 @@ Errores: refresh inválido, expirado, de tipo incorrecto o de un usuario deshabi
 | `/api/v1/training-sessions/**` | ADMIN, COACH |
 | `/api/v1/alerts/attendance/**` | ADMIN, COACH |
 | `/api/v1/athletes/*/attendance` | ADMIN, COACH |
+| `/api/v1/users` y `/api/v1/users/**` | ADMIN |
 
 > Un usuario `ROLE_USER` autenticado recibe **403** en cualquiera de estos paths.
+> La regla de `/api/v1/users/**` protege también futuros `PUT`/`DELETE`/`GET {id}`
+> aunque todavía no exista handler para ellos (un `USER` recibe 403, no 404/500).
 
 ### Restringidos por `@PreAuthorize` a nivel de método (en los controllers)
 
 | Endpoint | Rol |
 |---|---|
-| `GET /api/v1/users` | ADMIN |
+| `GET/POST /api/v1/users` | ADMIN (defensa en profundidad; la URL ya lo exige) |
 | `POST/PUT/DELETE /api/v1/national-reference-times/**` (tabla nacional) | ADMIN |
 
 (La lista completa por endpoint está en los archivos `03`–`07`.)
@@ -206,8 +209,8 @@ NO a login.
   `localStorage` es aceptable dado el perfil de riesgo; el refresh token tiene vida
   más larga, así que si se quiere endurecer, guárdalo separado del access token o
   valora `sessionStorage` para el access. Decisión final del equipo front.)
-- **Contraseñas**: BCrypt(12). Política de password en el alta de usuarios: mínimo 6
-  caracteres (débil — la robustez extra, si se quiere, se valida en front; ver `03`).
+- **Contraseñas**: BCrypt(12). Política de password en el alta de usuarios: mínimo 8
+  caracteres (alineado con la entidad `User`; ver `03`).
 - **No hay** rate limiting ni bloqueo por fuerza bruta (backlog POST-v1.0.0). El front
   puede implementar su propio "debounce"/deshabilitar botón tras N intentos, pero no debe
   esperar 429 del servidor.

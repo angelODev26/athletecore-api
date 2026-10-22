@@ -38,22 +38,15 @@ src/main/resources/db/migration/
 
 ### Datos de referencia
 
-**IMPORTANTE**: Esta migración V1 solo crea la **estructura de tablas**, NO incluye datos iniciales.
-Los seeds (roles, usuarios) deben gestionarse mediante:
-- Migración separada `V2__seed_data.sql` (si requiere datos iniciales)
-- O `CommandLineRunner` / Data Seeder en Spring (recomendado)
+**IMPORTANTE**: esta migración V1 solo crea la **estructura de tablas**. Los
+seeds de catálogo viven en migraciones versionadas, no en `CommandLineRunner`:
 
-Para crear roles de referencia en producción:
-```sql
--- Crear en V2__seed_data.sql
-INSERT INTO roles (name, created_at, updated_at) VALUES
-    ('ROLE_ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('ROLE_USER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('ROLE_TRAINER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    ('ROLE_COACH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-```
+- `V2` siembra `ROLE_USER` y `ROLE_ADMIN` junto al catálogo de deportes.
+- `V3` añade `ROLE_COACH`.
+- `V6` siembra el admin inicial desde placeholders de entorno.
 
-**NUNCA** incluir contraseñas hardcodeadas en migraciones. Usar variables de entorno o seeders de Spring.
+**NUNCA** incluir contraseñas en claro en migraciones: solo hashes BCrypt vía
+`ADMIN_PASSWORD_HASH`.
 
 ---
 
@@ -84,20 +77,25 @@ htpasswd -bnBC 12 "" 'mi-password' | tr -d ':\n'
 > En `.env`, rodéalo de **comillas simples**: `ADMIN_PASSWORD_HASH='$2y$12$...'`.
 > Sin comillas se trunca (por ejemplo `$f` se sustituye por vacío) y V6 aborta.
 > `ADMIN_USERNAME` y `ADMIN_EMAIL` no deben contener una comilla simple (`'`):
-> se interpolan en literales SQL y romperían el script.
+> se interpolan en literales SQL y romperían el script. Tampoco se admiten
+> espacios al inicio/fin: la migración los recorta (`btrim`).
 
 En producción, definir `ADMIN_PASSWORD_HASH` con ese valor. En local, el ejemplo
 versionado `src/main/resources/application-local.properties.example` trae el hash
 de desarrollo documentado (`admin` / `admin123`); cópialo o mézclalo en tu
-`application-local.properties` (gitignored) para no depender de variables
-externas.
+`application-local.properties` (gitignored) y arranca con el perfil local:
+
+```bash
+SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
+```
 
 ### Comportamiento
 
 - **Fail-fast**: si falta `ADMIN_PASSWORD_HASH`, Spring no arranca (placeholder no
-  resuelto). Si está definido pero vacío o no es un BCrypt válido (60 chars,
-  `$2a/$2b/$2y`), la migración aborta con un error accionable. Deliberado: evita
-  desplegar sin ninguna vía de administración o con una credencial inválida.
+  resuelto). Si está definido pero vacío o no es un BCrypt válido (**60 chars**,
+  `$2a/$2b/$2y`, coste `04`–`31` y charset base64 de BCrypt), la migración aborta
+  con un error accionable. Deliberado: evita desplegar sin ninguna vía de
+  administración o con una credencial inválida.
 - **No intrusiva**: si el username ya existe, solo se añade `ROLE_ADMIN` cuando el
   hash almacenado es **exactamente** el configurado (el salting de BCrypt hace que
   la misma contraseña produzca hashes distintos), la cuenta está `enabled` y sin
@@ -121,12 +119,9 @@ creada antes del merge), `validate-on-migrate=true` falla con
 `Migration checksum mismatch for migration version 6`. Opciones:
 
 ```bash
-# Reparar el checksum SIN re-ejecutar la migración (conserva los datos)
-docker compose --profile migrate run --rm flyway \
-  -url=jdbc:postgresql://postgres:5432/${DB_NAME:-athletecore} \
-  -userid=${DB_USER:-athletecore_user} -password=${DB_PASSWORD:-athletecore_pass} \
-  -locations=filesystem:/flyway-local \
-  repair
+# Reparar el checksum SIN re-ejecutar la migración (conserva los datos).
+# URL y credenciales salen del .env a través del servicio `flyway`.
+docker compose --profile migrate run --rm flyway repair
 
 # Alternativa en dev si la base es desechable (borra el volumen)
 docker compose down -v
@@ -134,13 +129,14 @@ docker compose down -v
 
 `repair` realinea el checksum y **no** vuelve a ejecutar la nueva lógica: si la
 base tenía la versión antigua, sus datos quedan como estaban (la nueva
-validación solo se aplica en bases donde V6 aún no se ejecutó). `mvn flyway:repair`
-no existe en este repo (no hay plugin de Flyway en `pom.xml`).
+validación solo se aplica en bases donde V6 aún no se ejecutó). Las credenciales
+viven en el `environment` del servicio `flyway`, no en la línea de comandos.
 
 > **Tests:** el `@SpringBootTest` aplica las migraciones sobre la BD configurada.
-> Si esa base tiene un `admin` con **otro** hash (por ejemplo, uno registrado por
-> el antiguo registro público), V6 aborta y `./mvnw test` falla: usa una base de
-> test dedicada (`DB_URL`) o audita/renombra ese usuario antes.
+> Siembra un usuario propio (`context-admin`) con un hash de test no documentado,
+> así que no colisiona con el `admin` real ni deja credenciales conocidas en una
+> base compartida. Aun así, usa una base de test dedicada (`DB_URL`): el test no
+> está pensado para ejecutarse contra entornos con datos reales.
 
 ### Verificación post-deploy
 
@@ -159,7 +155,7 @@ curl -s -X POST http://localhost:8080/api/v1/auth/login \
 
 ```properties
 spring.flyway.enabled=true
-spring.flyway.baseline-on-migrate=false    # Usar baseline solo en desarrollo local
+spring.flyway.baseline-on-migrate=true     # Primer arranque sobre una BD con tablas
 spring.flyway.locations=classpath:db/migration
 spring.flyway.validate-on-migrate=true
 spring.flyway.out-of-order=true            # Permite agregar migraciones fuera de orden en desarrollo
@@ -200,33 +196,34 @@ java -jar target/athletecore-api-0.0.1-SNAPSHOT.jar
 docker compose --profile migrate up flyway
 ```
 
-**Con Maven**: este repo **no** tiene el plugin de Flyway configurado, así que
-`mvn flyway:migrate|info|validate|repair` no están disponibles. Usa Spring Boot
-(que ejecuta Flyway al arrancar) o el servicio de Compose de arriba.
+**Con Maven**: el `pom.xml` **no configura** el `flyway-maven-plugin` (solo
+`flyway-core` como dependencia de runtime), así que `mvn flyway:*` no forma parte
+del flujo soportado del repo. Usa Spring Boot (que ejecuta Flyway al arrancar) o
+el servicio de Compose de arriba.
 
 ### Validar migraciones antes de producción
 
-Antes de desplegar en producción:
-```bash
-# Validar que los scripts SQL son correctos
-mvn flyway:validate
+`FLYWAY_VALIDATE_ON_MIGRATE=true` ya valida en cada `migrate`. Para validar sin
+aplicar cambios:
 
-# O usar el script
-./scripts/flyway.sh validate
+```bash
+docker compose --profile migrate run --rm flyway validate
 ```
+
+O arrancar la app con `./mvnw spring-boot:run` (Flyway corre al inicio).
 
 ### Baseline inicial (desarrollo)
 
-Solo necesario la primera vez si la BD está vacía:
-```bash
-# Con Maven
-mvn flyway:baseline -Dflyway.baselineVersion=1
+Solo necesario la primera vez si la BD ya tenía tablas antes de Flyway.
+`application.properties` define `spring.flyway.baseline-on-migrate=true`, así que
+Spring Boot crea el baseline automáticamente. Con el servicio de Compose:
 
-# Con script
-./scripts/flyway.sh baseline 1
+```bash
+docker compose --profile migrate run --rm flyway -baselineVersion=1 baseline
 ```
 
-**NOTA**: En producción, nunca usar baseline. Las migraciones deben ejecutarse en orden desde V1.
+**NOTA**: en producción, nunca usar baseline. Las migraciones deben ejecutarse
+en orden desde V1.
 
 ## Variables de entorno
 
@@ -246,18 +243,22 @@ mvn flyway:baseline -Dflyway.baselineVersion=1
 **Desarrollo Local:**
 ```properties
 # application-local.properties
+# El perfil local se activa con SPRING_PROFILES_ACTIVE=local
 spring.flyway.baseline-on-migrate=true  # Solo primera vez
 spring.flyway.validate-on-migrate=true
 spring.flyway.out-of-order=true         # Permite migraciones nuevas sin orden
 ```
 
-**Producción:**
+**Producción (override recomendado):**
 ```properties
-# application.properties (sin overrides locales)
+# application-prod.properties o variables de entorno
 spring.flyway.baseline-on-migrate=false  # Nunca crear baseline en prod
 spring.flyway.validate-on-migrate=true   # Validar antes de migrar
 spring.flyway.out-of-order=false         # Estricto orden de migraciones en prod
 ```
+
+> Hoy `application.properties` define `baseline-on-migrate=true`; en producción
+> conviene sobrescribirlo a `false` con el perfil/variables del entorno.
 
 ### Migraciones de Esquema vs Datos
 

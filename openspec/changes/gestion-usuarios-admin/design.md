@@ -145,9 +145,11 @@ El SQL real es la fuente de verdad; no se duplica aquí para evitar deriva.
   con un error accionable: nunca promueve una cuenta preexistente creada por el
   antiguo registro público. Tampoco sobrescribe password, `enabled` ni roles
   existentes. Un email ya en uso por otro usuario aborta (UNIQUE global).
-- **Tests**: `AthletecoreApiApplicationTests` recibe el placeholder por
-  `@SpringBootTest(properties = "spring.flyway.placeholders.admin_password_hash=...")`
-  para que el contexto arranque sin depender de una env externa.
+- **Tests**: `AthletecoreApiApplicationTests` recibe los placeholders por
+  `@SpringBootTest(properties = ...)` para que el contexto arranque sin depender
+  de una env externa. Usa una identidad propia (`context-admin`) con un hash de
+  un valor no documentado: no siembra credenciales conocidas en la BD de test ni
+  colisiona con un `admin` real con otro hash.
 
 ### D5 — Coordinación con el frontend y orden de despliegue
 

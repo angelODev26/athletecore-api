@@ -78,7 +78,7 @@
 | T8 | No hay `/me`, ni logout, ni edición/password de usuarios (tampoco `PUT /users/{id}` para roles/enabled) | Sesión 100% basada en decodificar el JWT + `user` del login; los roles se asignan al crear y se cambian en DB |
 | T9 | Reportes: lista filtrada en memoria | Cap de resultados en UI; refinar filtros antes de llamar |
 | T10 | Sin rate limiting ni brute-force en back | El front aplica sus propias mitigaciones de UX (bloqueo temporal del botón de login) |
-| T11 | Alta con username/email de un usuario **soft-deleted** devuelve 500 (los `UNIQUE` son globales y los chequeos de duplicado filtran `deleted_at`) | Tratar el 500 de alta como "ya existe" (409 de facto) y no prometer el username/email como libre |
+| T11 | ~~Alta con username/email de un usuario **soft-deleted** devuelve 500 (los `UNIQUE` son globales y los chequeos de duplicado filtran `deleted_at`)~~ | **Resuelto** (review de `gestion-usuarios-admin`): `GlobalExceptionHandler` traduce `DataIntegrityViolationException` a **409**; el front lo trata como "ya existe" |
 
 ---
 
@@ -114,7 +114,7 @@ Bugs/mismatch menores que conviene arreglar en el back (baratos, independientes 
 
 | # | Hallazgo | Dónde |
 |---|----------|-------|
-| H1 | `docker-compose.yml` inyecta `CORS_ALLOWED_ORIGINS`/`JWT_EXPIRATION_MS` pero el código lee `CORS_ORIGINS`/`JWT_EXPIRATION` → CORS roto en el contenedor `app-dev` | `01` §2 |
+| H1 | ~~`docker-compose.yml` inyecta `CORS_ALLOWED_ORIGINS`/`JWT_EXPIRATION_MS` pero el código lee `CORS_ORIGINS`/`JWT_EXPIRATION` → CORS roto en el contenedor `app-dev`~~ — **Resuelto**: compose usa los nombres que lee el código | `01` §2 |
 | H2 | `GET /api/v1/athletes/{id}/sports` y `POST .../sports` devuelven solo IDs; la UI necesitará el catálogo cacheado (mitigable) — pero las **disciplinas** ni siquiera tienen catálogo consultable | `04` §4, D4 |
 | H3 | El endpoint de acknowledge de alertas devuelve 200 con la alerta "acknowledgement" sin persistir; riesgo de que un front desprevenido lo trate como funcional | `05` §5, D3 |
 | H4 | Swagger UI protegido por JWT (decisión consciente pero sorprendente); alternativa: moverlo a perfil local si se quiere exploración sin login | `01` §4 |

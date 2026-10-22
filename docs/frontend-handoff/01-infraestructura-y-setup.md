@@ -60,16 +60,12 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 | `CORS_ORIGINS` | Orígenes permitidos, separados por coma | `http://localhost:3000,http://localhost:5173` (solo `local`) |
 | `SERVER_PORT` | Puerto HTTP | `8080` |
 
-### ⚠️ Inconsistencia conocida de nombres de variable (deuda)
+### Nombres de variable (resuelto)
 
-El código lee **`CORS_ORIGINS`** y **`JWT_EXPIRATION`**, pero `docker-compose.yml`
-inyecta **`CORS_ALLOWED_ORIGINS`** y **`JWT_EXPIRATION_MS`**. Consecuencia práctica:
-
-- En **Opción A** todo funciona (usa los nombres correctos).
-- En **Opción B** (Docker `app-dev`), CORS queda **sin orígenes** → CORS deshabilitado →
-  el navegador bloqueará las llamadas del front. Workaround: añadir también
-  `CORS_ORIGINS`/`JWT_EXPIRATION` al `environment` de `app-dev`, o usar Opción A.
-  (Documentado como pendiente en `09-decisiones-deuda-y-pendientes.md`.)
+`docker-compose.yml` inyecta los mismos nombres que lee el código
+(`CORS_ORIGINS`, `JWT_EXPIRATION`), tanto en `app-dev` como en `app`, así que
+la Opción B (Docker) también tiene CORS y expiración correctos. Ya no hay que
+añadir workarounds al `environment`.
 
 ---
 

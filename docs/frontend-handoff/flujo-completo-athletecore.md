@@ -1,6 +1,7 @@
 # AthleteCore — Flujo completo del sistema (diagramas)
 
-> Estado **actual y verificado contra el código** (`develop` @ `293f0dd`, vía CodeGraph).
+> Estado **actual y verificado contra el código** (`develop` tras el change
+> `gestion-usuarios-admin`, vía CodeGraph).
 > 6 diagramas de secuencia: el 1 es la vista general; 2–6 detallan cada subsistema.
 > Documentación de apoyo: `docs/frontend-handoff/` (00–09) en el repo del backend.
 >
@@ -23,7 +24,7 @@ sequenceDiagram
 
     C->>SEC: request con Authorization Bearer
     Note over SEC: Puntos de corte antes de la lógica de negocio
-    alt ruta pública (registro o login)
+    alt ruta pública (login o refresh)
         SEC->>CTL: pasa sin token
     else token ausente, inválido o expirado
         SEC-->>C: ⚠️ 401 Autenticación requerida
@@ -107,8 +108,9 @@ sequenceDiagram
   permisos. Nunca mezclarlos (ver `02` §5).
 - **Rotación sin estado:** cada refresh emite par nuevo y el anterior sigue válido hasta su
   expiración (no hay revocación en servidor). El front siempre reemplaza el par completo.
-- Registro (`POST /api/v1/users`) es público pero no encadena login: crea siempre con
-  `ROLE_USER` y el usuario debe loguearse después (ver `03` §3, §6).
+- El alta de usuarios (`POST /api/v1/users`) **no es pública**: la hace un ADMIN y
+  elige los roles (por defecto `ROLE_USER`). El primer ADMIN nace del seed Flyway
+  `V6`; el nuevo usuario debe loguearse aparte (ver `03` §3, §6).
 
 ---
 

@@ -164,3 +164,25 @@
    - Extra: `postgres` añadido a los perfiles `migrate`/`development`/`production`
      y retirados de la doc los comandos `mvn flyway:*` / `scripts/flyway.sh`
      inexistentes.
+
+7. **Review del bloque completo del change (M-1..M-4, B-1..B-4, N-1..N-8).**
+   Corregido:
+   - M-1: `docs/flyway.md` ya no documenta `mvn flyway:*` ni `scripts/flyway.sh`;
+     validación y baseline se explican con Spring Boot/Compose.
+   - M-2: `flyway` habilitado en los perfiles `development` y `production`, para
+     que los `depends_on` de `app-dev`/`app` resuelvan.
+   - M-3: credenciales de Flyway movidas al `environment` del servicio (no en
+     `ps`/historial); el runbook de `repair` es `docker compose ... run flyway repair`.
+   - M-4: `CORS_ALLOWED_ORIGINS` unificado a `CORS_ORIGINS` (la variable que lee
+     `application.properties`), en compose y README.
+   - B-1/B-3: documentado `SPRING_PROFILES_ACTIVE=local`, la restricción de
+     apóstrofo y el coste/charset BCrypt en los documentos operativos.
+   - B-2: comentario del test discriminante corregido (500, no 404/405).
+   - B-4: PostgreSQL publicado solo en `127.0.0.1` y aviso de credenciales en
+     producción.
+   - N-1/N-6: flujo canónico y matriz de acceso alineados con el registro cerrado.
+   - N-2: política de password unificada a mínimo 8 (DTO y entidad).
+   - N-3: `DataIntegrityViolationException` → 409 (T11 resuelta).
+   - N-4: context test con identidad y hash propios, no el admin de desarrollo.
+   - N-5/N-7/N-8: `@EntityGraph` en `findAll`, rol de catálogo ausente → 400 y
+     `JWT_SECRET` sin fallback en `app-dev`.

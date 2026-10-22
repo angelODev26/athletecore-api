@@ -25,7 +25,7 @@ public class CreateUserRequest {
     private String lastName;
 
     @NotBlank(message = "Password is mandatory")
-    @Size(min = 6, message = "Password must be at least 6 characters")
+    @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 
     @NotBlank(message = "Password confirmation is mandatory")

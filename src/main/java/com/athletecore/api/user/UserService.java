@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.athletecore.api.common.exception.DuplicateResourceException;
-import com.athletecore.api.common.exception.ResourceNotFoundException;
 import com.athletecore.api.common.exception.ValidationException;
 import com.athletecore.api.domain.Role;
 import com.athletecore.api.domain.User;
@@ -85,8 +84,12 @@ public class UserService {
 
         Set<Role> roles = new LinkedHashSet<>();
         for (String roleName : normalizedRoles) {
+            // Un rol del catálogo ausente o soft-deleted es un error de
+            // configuración del entorno, no un 404 de recurso pedido por el
+            // cliente: se informa como validación (400) con mensaje accionable.
             Role role = roleRepository.findByName(roleName)
-                    .orElseThrow(() -> new ResourceNotFoundException("Role", "name", roleName));
+                    .orElseThrow(() -> new ValidationException(
+                            "Rol no disponible en el catálogo: " + roleName));
             roles.add(role);
         }
         return roles;

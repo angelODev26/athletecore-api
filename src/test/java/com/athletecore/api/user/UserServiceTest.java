@@ -1,7 +1,6 @@
 package com.athletecore.api.user;
 
 import com.athletecore.api.common.exception.DuplicateResourceException;
-import com.athletecore.api.common.exception.ResourceNotFoundException;
 import com.athletecore.api.common.exception.ValidationException;
 import com.athletecore.api.domain.Role;
 import com.athletecore.api.domain.User;
@@ -251,7 +250,7 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("Debe lanzar ResourceNotFoundException cuando el role no existe")
+    @DisplayName("Debe lanzar ValidationException cuando el rol no está en el catálogo")
     void createUser_RoleNotFound() {
         // Arrange
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
@@ -259,9 +258,11 @@ class UserServiceTest {
         when(roleRepository.findByName("ROLE_USER")).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> {
+        ValidationException exception = assertThrows(ValidationException.class, () -> {
             userService.createUser(createUserRequest);
         });
+        assertTrue(exception.getMessage().contains("ROLE_USER"));
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
