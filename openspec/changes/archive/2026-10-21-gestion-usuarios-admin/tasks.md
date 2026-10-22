@@ -116,8 +116,8 @@
       la forma final del request y el nombre exacto de los roles; el front retoma
       `alta-usuarios-admin`.
 - [x] 6.5a Merge a `develop` + push (merge `f4983d7`).
-- [ ] 6.5b Sync de la spec `gestion-usuarios` a `openspec/specs/` + archive del
-      change.
+- [x] 6.5b Sync de la spec `gestion-usuarios` a `openspec/specs/` + archive del
+      change (2026-10-21).
 
 ## Desviaciones
 
